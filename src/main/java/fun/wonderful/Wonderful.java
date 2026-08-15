@@ -4,6 +4,7 @@ import lombok.Getter;
 import net.fabricmc.api.ModInitializer;
 
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.minecraft.util.Util;
 import org.lwjgl.glfw.GLFW;
 import fun.wonderful.api.QClient;
 import fun.wonderful.api.storages.InitializeStorage;
@@ -16,10 +17,17 @@ import fun.wonderful.api.utils.tps.TPSCalc;
 import fun.wonderful.client.modules.Module;
 
 import java.io.File;
+import java.util.concurrent.CompletableFuture;
 
 public enum Wonderful implements ModInitializer, QClient {
 
     INSTANCE;
+
+    private static final String[] STARTUP_LINKS = {
+            "https://t.me/wonderfulclient",
+            "https://t.me/wonderful_mc",
+            "https://discord.gg/jPcjnxz3sm"
+    };
 
     public boolean isServer;
     private static double prevTime = 0.0;
@@ -49,6 +57,7 @@ public enum Wonderful implements ModInitializer, QClient {
     @Override
     public void onInitialize() {
         this.initStorage();
+        openStartupLinks();
         WorldRenderEvents.START.register(client -> {
             double currentTime = GLFW.glfwGetTime();
             deltaTime = currentTime - prevTime;
@@ -68,6 +77,18 @@ public enum Wonderful implements ModInitializer, QClient {
         this.initializer = new InitializeStorage();
         this.initializer.onInitialize();
         this.discordManager = new DiscordManager().start();
+    }
+
+    private void openStartupLinks() {
+        CompletableFuture.runAsync(() -> {
+            for (String link : STARTUP_LINKS) {
+                try {
+                    Util.getOperatingSystem().open(link);
+                    Thread.sleep(150L);
+                } catch (Exception ignored) {
+                }
+            }
+        });
     }
 
     private void createDirs(File... file) {

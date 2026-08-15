@@ -20,7 +20,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import fun.wonderful.api.QClient;
 import fun.wonderful.api.storages.implement.helpertstorages.enumvar.ModuleClass;
-import fun.wonderful.client.modules.impl.render.Chams;
 import fun.wonderful.client.modules.impl.render.SeeInvisibles;
 import fun.wonderful.client.modules.impl.render.SeeInvisiblesRenderState;
 
@@ -48,23 +47,6 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, S extend
         return ((SeeInvisiblesRenderState) state).wonderful$isSeeInvisiblesTarget()
                 ? SeeInvisibles.INVISIBLE_COLOR
                 : original;
-    }
-
-    @Inject(
-            method = "getRenderLayer(Lnet/minecraft/client/render/entity/state/LivingEntityRenderState;ZZZ)Lnet/minecraft/client/render/RenderLayer;",
-            at = @At("HEAD"),
-            cancellable = true
-    )
-    private void wonderful$hideOriginalModel(S state, boolean showBody, boolean translucent, boolean showOutline, CallbackInfoReturnable<RenderLayer> cir) {
-        Chams chams = ModuleClass.INSTANCE != null ? ModuleClass.chams : null;
-        if (chams == null || !chams.isEnable()) {
-            return;
-        }
-
-        PlayerEntity player = wonderful$resolvePlayer(state);
-        if (player != null && chams.shouldHideBaseModel(player)) {
-            cir.setReturnValue(null);
-        }
     }
 
     @Unique

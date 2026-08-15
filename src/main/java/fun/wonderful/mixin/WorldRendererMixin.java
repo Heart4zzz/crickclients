@@ -21,7 +21,6 @@ import fun.wonderful.api.QClient;
 import fun.wonderful.api.events.EventInvoker;
 import fun.wonderful.api.events.implement.Event3DRender;
 import fun.wonderful.api.storages.implement.helpertstorages.enumvar.ModuleClass;
-import fun.wonderful.client.modules.impl.render.Chams;
 import fun.wonderful.client.modules.impl.render.Removals;
 import fun.wonderful.client.modules.impl.render.ShaderEsp;
 import fun.wonderful.client.modules.impl.render.Sonar;
@@ -108,10 +107,6 @@ public class WorldRendererMixin implements QClient {
             return;
         }
 
-        Chams chams = ModuleClass.INSTANCE.chams;
-        if (chams != null && chams.shouldHideOutlineFramebuffer()) {
-            ci.cancel();
-        }
     }
 
     @Inject(method = "drawBlockOutline", at = @At("HEAD"), cancellable = true)

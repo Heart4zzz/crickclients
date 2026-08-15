@@ -82,7 +82,7 @@ public class Aura extends Module {
     public static Aura INSTANCE = new Aura();
 
     public final ModeSetting rotationType = new ModeSetting("Ротация", "Smooth",
-            "Smooth", "Snap", "SpookyTime", "Data", "Sloth", "NoRotate");
+            "Smooth", "Snap", "Data", "Sloth", "NoRotate");
 
     private final ListSetting targets = new ListSetting("Таргеты",
             new BooleanSetting("Игроки", true),
@@ -412,9 +412,7 @@ public class Aura extends Module {
 
         RotationsSystem system;
 
-        if (rotationType.is("SpookyTime")) {
-            system = new LegitRotation();
-        } else if (rotationType.is("Smooth")) {
+        if (rotationType.is("Smooth")) {
             system = new RotationsSystem() {
                 @Override
                 public void updateRotations(LivingEntity target) {

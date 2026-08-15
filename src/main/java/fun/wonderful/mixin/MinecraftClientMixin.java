@@ -18,7 +18,6 @@ import fun.wonderful.api.events.implement.EventTickPre;
 import fun.wonderful.api.storages.implement.helpertstorages.enumvar.ModuleClass;
 import fun.wonderful.api.utils.baritone.BaritoneAntiStuck;
 import fun.wonderful.api.utils.player.Counter;
-import fun.wonderful.client.modules.impl.render.Chams;
 import fun.wonderful.client.modules.impl.render.ShaderEsp;
 
 import java.lang.reflect.InvocationTargetException;
@@ -75,11 +74,6 @@ public abstract class MinecraftClientMixin {
         if (shaderEsp != null && shaderEsp.shouldOutline(entity)) {
             cir.setReturnValue(true);
             return;
-        }
-
-        Chams chams = ModuleClass.INSTANCE.chams;
-        if (chams != null && entity instanceof PlayerEntity player && chams.shouldUseOutlineAssist(player)) {
-            cir.setReturnValue(true);
         }
     }
 }

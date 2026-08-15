@@ -19,7 +19,7 @@ public class WaterMark extends InterfaceProcessing {
     private boolean showTps = true;
 
     public static String getUsername() {
-        return "ambience";
+        return "t.me/wonderfulclient";
     }
 
     public static String getUID() {
@@ -77,6 +77,8 @@ public class WaterMark extends InterfaceProcessing {
         var iconNew14 = Fonts.getFont("iconnew", 14);
         var iconNew15 = Fonts.getFont("iconnew", 15);
         var icon14 = Fonts.getFont("icon", 14);
+        var statsIconFont = Fonts.getFont("wonderful", 14);
+        if (statsIconFont == null) statsIconFont = iconNew14 != null ? iconNew14 : icon14;
         var suisse13 = Fonts.getFont("suisse", 13);
 
         float wonderfulRectH = 16;
@@ -123,7 +125,8 @@ public class WaterMark extends InterfaceProcessing {
         float icon2Y = y + 7.45f;
 
         int icon3Size = 14;
-        String iconGlyph3 = "m";
+        String fpsIconGlyph = "j";
+        String pingIconGlyph = "f";
         float icon3Y = y + 7.25f;
 
         int fps = mc != null ? mc.getCurrentFps() : 0;
@@ -146,11 +149,11 @@ public class WaterMark extends InterfaceProcessing {
             contentW += suisse13.getStringWidth(username) + 2f;
         }
         if (showFps) {
-            contentW += icon14.getStringWidth(iconGlyph3) + 2f;
+            contentW += statsIconFont != null ? statsIconFont.getStringWidth(fpsIconGlyph) + 2f : 0f;
             contentW += suisse13.getStringWidth(fpsText) + 2f;
         }
         if (showMs) {
-            contentW += iconNew14.getStringWidth(iconGlyph3) + 2f;
+            contentW += statsIconFont != null ? statsIconFont.getStringWidth(pingIconGlyph) + 2f : 0f;
             contentW += suisse13.getStringWidth(pingText) + 2f;
         }
         contentW += rect2Pad;
@@ -172,16 +175,20 @@ public class WaterMark extends InterfaceProcessing {
         }
 
         if (showFps) {
-            icon14.drawGradientStringHorizontal(matrices, iconGlyph3, drawX, icon3Y, iconTop, iconTop);
-            drawX += icon14.getStringWidth(iconGlyph3) + 2f;
+            if (statsIconFont != null) {
+                statsIconFont.drawGradientStringHorizontal(matrices, fpsIconGlyph, drawX, icon3Y, iconTop, iconTop);
+                drawX += statsIconFont.getStringWidth(fpsIconGlyph) + 2f;
+            }
             suisse13.drawString(matrices, fpsValue, drawX, textY, whiteColor);
             suisse13.drawString(matrices, fpsSuffix, drawX + suisse13.getStringWidth(fpsValue) - 1, textY, iconTop);
             drawX += suisse13.getStringWidth(fpsText) + 2f;
         }
 
         if (showMs) {
-            iconNew14.drawGradientStringHorizontal(matrices, iconGlyph3, drawX, icon3Y, iconTop, iconTop);
-            drawX += iconNew14.getStringWidth(iconGlyph3) + 2f;
+            if (statsIconFont != null) {
+                statsIconFont.drawGradientStringHorizontal(matrices, pingIconGlyph, drawX, icon3Y, iconTop, iconTop);
+                drawX += statsIconFont.getStringWidth(pingIconGlyph) + 2f;
+            }
             suisse13.drawString(matrices, pingValue, drawX, textY, whiteColor);
             suisse13.drawString(matrices, pingSuffix, drawX + suisse13.getStringWidth(pingValue) - 0.5, textY, iconTop);
         }

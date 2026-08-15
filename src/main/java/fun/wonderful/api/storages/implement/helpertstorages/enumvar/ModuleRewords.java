@@ -30,7 +30,6 @@ public interface ModuleRewords {
     NameProtect nameProtect = NameProtect.INSTANCE;
     AutoJump autoJump = AutoJump.INSTANCE;
     ChestStealer chestStealer = ChestStealer.INSTANCE;
-    Chams chams = Chams.INSTANCE;
     ClientSounds clientSounds = ClientSounds.INSTANCE;
     AutoTool autoTool = AutoTool.INSTANCE;
     AutoTotem autoTotem = AutoTotem.INSTANCE;
@@ -106,8 +105,6 @@ public interface ModuleRewords {
     TriggerBot triggerBot = TriggerBot.INSTANCE;
     NoSlow noSlow = NoSlow.INSTANCE;
     ScoreboardHP scoreboardHP = ScoreboardHP.INSTANCE;
-    PotionTracker potionTracker = PotionTracker.INSTANCE;
-    LayerCooldown layerCooldwon = LayerCooldown.INSTANCE;
     Step step = Step.INSTANCE;
     ServerHelper serverHelper = ServerHelper.INSTANCE;
     Spider spider = Spider.INSTANCE;
