@@ -1,9 +1,9 @@
 {
 	"schemaVersion": 1,
-	"id": "wonderful",
+	"id": "crickclient",
 	"version": "${version}",
-	"name": "wonderful",
-	"description": "best dlc",
+	"name": "Crick Client",
+	"description": "Crick Client",
 	"authors": [
 		"whylol, prince"
 	],
@@ -12,7 +12,7 @@
 		"sources": "https://github.com/FabricMC/fabric-example-mod"
 	},
 	"license": "CC0-1.0",
-	"icon": "assets/wonderful/icon.png",
+	"icon": "assets/crickclient/icon.png",
 	"environment": "*",
 	"jars": [
 		{
@@ -21,11 +21,11 @@
 	],
 	"entrypoints": {
 		"main": [
-			"fun.wonderful.Wonderful::INSTANCE"
+			"fun.crickclient.CrickClient::INSTANCE"
 		]
 	},
 	"mixins": [
-		"wonderful.mixins.json"
+		"crickclient.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.18.4",
