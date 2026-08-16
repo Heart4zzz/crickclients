@@ -24,7 +24,6 @@ public class ShaderUtils implements QClient {
     public final ShaderProgramKey fontsMsdf = register("fonts", "fonts", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey face = register("face", "face", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey gradient6Rect = register("gradient6", "gradient", VertexFormats.POSITION_COLOR);
-    public final ShaderProgramKey sonar = register("sonar", "sonar", VertexFormats.POSITION_COLOR);
     public final ShaderProgramKey scanEffect = register("sonar", "scan_effect", VertexFormats.POSITION_TEXTURE);
     public final ShaderProgramKey blockOverlay = register("blockoverlay", "block_overlay", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey chamsFill = register("chams", "chams_fill", VertexFormats.POSITION_TEXTURE_COLOR);
