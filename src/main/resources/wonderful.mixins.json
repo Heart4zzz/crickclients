@@ -47,7 +47,13 @@
     "CobwebBlockMixin",
     "WorldRendererAccessor",
     "HeldItemRendererHmiMixin",
-    "IMinecraftClientAccessor"
+    "IMinecraftClientAccessor",
+    "ArmorFeatureRendererMixin",
+    "CapeFeatureRendererMixin",
+    "HeadFeatureRendererMixin",
+    "HeldItemFeatureRendererMixin",
+    "IdentifierMixin",
+    "MainMixin"
   ],
   "injectors": {
     "defaultRequire": 1

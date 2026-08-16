@@ -1,6 +1,5 @@
 package fun.wonderful.api.storages.implement.helpertstorages.enumvar;
 
-import com.jcraft.jorbis.Block;
 import fun.wonderful.client.modules.impl.combat.*;
 import fun.wonderful.client.modules.impl.misc.*;
 import fun.wonderful.client.modules.impl.movement.*;
@@ -101,6 +100,9 @@ public interface ModuleRewords {
     WorldTweaks worldTweaks = WorldTweaks.INSTANCE;
     XCarry xCarry = XCarry.INSTANCE;
     AutoSwap autoSwap = AutoSwap.INSTANCE;
+    Chams chams = Chams.INSTANCE;
+    LayerCooldown layerCooldown = LayerCooldown.INSTANCE;
+    PotionTracker potionTracker = PotionTracker.INSTANCE;
     AimBot aimBot = AimBot.INSTANCE;
     TriggerBot triggerBot = TriggerBot.INSTANCE;
     NoSlow noSlow = NoSlow.INSTANCE;
