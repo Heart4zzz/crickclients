@@ -27,12 +27,12 @@ public class ConfigCommand extends Command {
                         .then(arg("config", word())
                                 .suggests((context, builder1) -> {
                                     if (CrickClient.INSTANCE.configsDir.exists() && CrickClient.INSTANCE.configsDir.isDirectory()) {
-                                        File[] files = CrickClient.INSTANCE.configsDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".wonder"));
+                                        File[] files = CrickClient.INSTANCE.configsDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".crick"));
 
                                         if (files != null) {
                                             Arrays.stream(files)
                                                     .map(File::getName)
-                                                    .map(name -> name.replace(".wonder", ""))
+                                                    .map(name -> name.replace(".crick", ""))
                                                     .forEach(builder1::suggest);
                                         }
                                     }
@@ -57,12 +57,12 @@ public class ConfigCommand extends Command {
                         .then(arg("config", word())
                                 .suggests((context, builder1) -> {
                                     if (CrickClient.INSTANCE.configsDir.exists() && CrickClient.INSTANCE.configsDir.isDirectory()) {
-                                        File[] files = CrickClient.INSTANCE.configsDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".wonder"));
+                                        File[] files = CrickClient.INSTANCE.configsDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".crick"));
 
                                         if (files != null) {
                                             Arrays.stream(files)
                                                     .map(File::getName)
-                                                    .map(name -> name.replace(".wonder", ""))
+                                                    .map(name -> name.replace(".crick", ""))
                                                     .forEach(builder1::suggest);
                                         }
                                     }
@@ -85,14 +85,14 @@ public class ConfigCommand extends Command {
                 )
                 .then(literal("list")
                         .executes(context -> {
-                            File[] files = CrickClient.INSTANCE.configsDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".wonder"));
+                            File[] files = CrickClient.INSTANCE.configsDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".crick"));
 
                             if (files == null || files.length == 0) {
                                 ChatUtils.sendMessage("Список конфигов пуст!");
                             } else {
                                 StringBuilder builder1 = new StringBuilder();
                                 for (int i = 0; i < files.length; i++) {
-                                    String fileName = files[i].getName().replace(".wonder", "");
+                                    String fileName = files[i].getName().replace(".crick", "");
                                     builder1.append(fileName);
                                     if (i < files.length - 1) builder1.append(", ");
                                 }

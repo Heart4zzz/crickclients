@@ -7,6 +7,7 @@ public class Fonts {
 
     private static final HashMap<String, MsdfFont> loadedFonts = new HashMap<>();
     private static final HashMap<String, Font[]> fontCache = new HashMap<>();
+    private static final HashMap<String, Font> scaledFontCache = new HashMap<>();
     private static boolean initialized = false;
 
     public static void init() {
@@ -59,6 +60,36 @@ public class Fonts {
         }
 
         return null;
+    }
+
+    /**
+     * Версия {@link #getFont(String, int)} с дробным размером — нужна HUD-элементам,
+     * где размеры шрифта заданы не целыми числами (7.5, 6.75 и т.д.).
+     */
+    public static Font getFont(String name, float size) {
+        if (!initialized) init();
+
+        String cleanName = name.replace(".ttf", "");
+        if (size < 1f) size = 1f;
+
+        String key = cleanName + "@" + Math.round(size * 100f);
+        Font cached = scaledFontCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
+        MsdfFont msdfFont = loadedFonts.get(cleanName);
+        if (msdfFont == null) {
+            loadFont(cleanName);
+            msdfFont = loadedFonts.get(cleanName);
+        }
+        if (msdfFont == null) {
+            return null;
+        }
+
+        Font font = new Font(msdfFont, size);
+        scaledFontCache.put(key, font);
+        return font;
     }
 
     public static void drawStringWithFade(Font font, String text, float x, float y, float maxWidth, int color) {

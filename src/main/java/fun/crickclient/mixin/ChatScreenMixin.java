@@ -43,6 +43,7 @@ public class ChatScreenMixin {
 
         boolean leftPressed = GLFW.glfwGetMouseButton(mc.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
         if (crickclient$leftPressed && !leftPressed) {
+            ModuleClass.interfaceModule.handleHudRelease(0);
             for (Draggable draggable : DragStorage.draggables.values()) {
                 draggable.onRelease(0);
             }
@@ -54,13 +55,12 @@ public class ChatScreenMixin {
                 draggable.onDraw(mouseX, mouseY, window, context.getMatrices());
             }
         }
-
-        ModuleClass.interfaceModule.renderHudContextMenu(context, mouseX, mouseY);
     }
 
     @Inject(method = "removed", at = @At("HEAD"))
     private void onRemoved(CallbackInfo ci) {
         crickclient$leftPressed = false;
+        ModuleClass.interfaceModule.handleHudRelease(0);
         for (Draggable draggable : DragStorage.draggables.values()) {
             draggable.onRelease(0);
         }

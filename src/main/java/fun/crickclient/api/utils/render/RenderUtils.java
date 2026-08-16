@@ -484,6 +484,10 @@ public class RenderUtils implements QClient {
         drawHeadInternal(matrices, skinTexture, x, y, size, radius, 1.0f, 0.0f);
     }
 
+    public void drawPlayerHead(MatrixStack matrices, Identifier skinTexture, float x, float y, float size, float radius, float alpha, float hurtPercent) {
+        drawHeadInternal(matrices, skinTexture, x, y, size, radius, alpha, hurtPercent);
+    }
+
     private void drawHeadInternal(MatrixStack matrices, Identifier skinTexture, float x, float y, float size, float radius, float alpha, float hurtPercent) {
         if (skinTexture == null) {
             skinTexture = DefaultSkinHelper.getSkinTextures(DEFAULT_SKIN_UUID).texture();

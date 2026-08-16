@@ -48,6 +48,20 @@ public class InGameGuiMixin implements QClient {
         }
     }
 
+    @Inject(method = "renderHotbar", at = @At("HEAD"), cancellable = true, require = 0)
+    private void crickclient$hideVanillaHotbar(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+        if (ModuleClass.interfaceModule.isCustomHotbarActive()) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "renderStatusEffectOverlay", at = @At("HEAD"), cancellable = true, require = 0)
+    private void crickclient$hideVanillaEffects(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+        if (ModuleClass.interfaceModule.isPotionsActive()) {
+            ci.cancel();
+        }
+    }
+
     @Inject(method = "render", at = @At("HEAD"))
     private void render(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
         BlurProgram.getInstance().beginFrame();

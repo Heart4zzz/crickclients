@@ -42,6 +42,14 @@ public class Font implements QClient {
         draw(stack, text, x, y, color);
     }
 
+    /**
+     * Рисует строку без внутренней вертикальной поправки {@code -1.5f}:
+     * координата Y трактуется как верх текстового бокса.
+     */
+    public void drawStringNoOffset(MatrixStack matrixStack, String text, float x, float y, int color) {
+        draw(matrixStack, text, x, y + 1.5f, color);
+    }
+
     public void drawCenteredString(MatrixStack matrixStack, String text, double x, double y, int color) {
         draw(matrixStack, text, (float) (x - getStringWidth(text) / 2.0), (float) y, color);
     }

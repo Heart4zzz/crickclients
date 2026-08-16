@@ -8,10 +8,6 @@ import fun.crickclient.api.utils.cmd.macro.Macro;
 import fun.crickclient.api.utils.draggable.Draggable;
 import fun.crickclient.api.utils.namespaced.FileUtils;
 import fun.crickclient.client.modules.Module;
-import fun.crickclient.client.modules.impl.render.Interface;
-import fun.crickclient.client.modules.impl.render.base.InterfaceProcessing;
-import fun.crickclient.client.modules.impl.render.base.implement.TargetHud;
-import fun.crickclient.client.modules.impl.render.base.implement.WaterMark;
 import fun.crickclient.client.modules.settings.Setting;
 import fun.crickclient.client.modules.settings.implement.*;
 
@@ -25,7 +21,7 @@ import java.util.Map;
 public class ConfigStorage {
 
     public String currentConfig = "default";
-    private final String extension = ".wonder";
+    private final String extension = ".crick";
 
     public ConfigStorage() {
         loadAll();
@@ -351,77 +347,15 @@ public class ConfigStorage {
         }
     }
 
+    /**
+     * Позиции HUD-элементов хранятся в draggables, а их настройки — обычные настройки модуля Interface,
+     * поэтому отдельная секция "hud" больше не нужна (оставлена для совместимости старых конфигов).
+     */
     private JsonObject serializeHudState() {
-        JsonObject hud = new JsonObject();
-        Interface interfaceModule = ModuleClass.interfaceModule;
-        if (interfaceModule == null) {
-            return hud;
-        }
-
-        for (Map.Entry<String, InterfaceProcessing> entry : interfaceModule.getConfigurableHudElements().entrySet()) {
-            InterfaceProcessing element = entry.getValue();
-            if (element == null) {
-                continue;
-            }
-
-            JsonObject object = new JsonObject();
-            object.add("unusualRectType", new JsonPrimitive(element.isUnusualRectType()));
-
-            if (element instanceof WaterMark waterMark) {
-                object.add("showFps", new JsonPrimitive(waterMark.isShowFps()));
-                object.add("showMs", new JsonPrimitive(waterMark.isShowMs()));
-                object.add("showServer", new JsonPrimitive(waterMark.isShowServer()));
-                object.add("showTps", new JsonPrimitive(waterMark.isShowTps()));
-            } else if (element instanceof TargetHud targetHud) {
-                object.add("headParticlesEnabled", new JsonPrimitive(targetHud.isHeadParticlesEnabled()));
-            }
-
-            hud.add(entry.getKey(), object);
-        }
-
-        return hud;
+        return new JsonObject();
     }
 
     private void deserializeHudState(JsonObject hud) {
-        Interface interfaceModule = ModuleClass.interfaceModule;
-        if (interfaceModule == null) {
-            return;
-        }
-
-        for (Map.Entry<String, InterfaceProcessing> entry : interfaceModule.getConfigurableHudElements().entrySet()) {
-            if (!hud.has(entry.getKey())) {
-                continue;
-            }
-
-            try {
-                JsonObject object = hud.get(entry.getKey()).getAsJsonObject();
-                InterfaceProcessing element = entry.getValue();
-
-                if (object.has("unusualRectType")) {
-                    element.setUnusualRectType(object.get("unusualRectType").getAsBoolean());
-                }
-
-                if (element instanceof WaterMark waterMark) {
-                    if (object.has("showFps")) {
-                        waterMark.setShowFps(object.get("showFps").getAsBoolean());
-                    }
-                    if (object.has("showMs")) {
-                        waterMark.setShowMs(object.get("showMs").getAsBoolean());
-                    }
-                    if (object.has("showServer")) {
-                        waterMark.setShowServer(object.get("showServer").getAsBoolean());
-                    }
-                    if (object.has("showTps")) {
-                        waterMark.setShowTps(object.get("showTps").getAsBoolean());
-                    }
-                } else if (element instanceof TargetHud targetHud) {
-                    if (object.has("headParticlesEnabled")) {
-                        targetHud.setHeadParticlesEnabled(object.get("headParticlesEnabled").getAsBoolean());
-                    }
-                }
-            } catch (Exception ignored) {
-            }
-        }
     }
 
     private JsonObject serializeDraggables() {

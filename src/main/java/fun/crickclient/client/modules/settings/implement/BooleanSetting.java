@@ -21,6 +21,10 @@ public class BooleanSetting extends Setting {
         return new BooleanSetting(name, state);
     }
 
+    public void toggle() {
+        this.state = !this.state;
+    }
+
     public BooleanSetting visible(Supplier<Boolean> state) {
         this.visible = state;
         return this;

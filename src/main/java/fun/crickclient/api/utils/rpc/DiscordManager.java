@@ -9,7 +9,6 @@ import fun.crickclient.api.QClient;
 import fun.crickclient.api.utils.rpc.utils.DiscordEventHandlers;
 import fun.crickclient.api.utils.rpc.utils.DiscordRPC;
 import fun.crickclient.api.utils.rpc.utils.DiscordRichPresence;
-import fun.crickclient.client.modules.impl.render.base.implement.WaterMark;
 
 @Getter
 public class DiscordManager implements QClient {
@@ -48,8 +47,8 @@ public class DiscordManager implements QClient {
         new Thread(() -> {
             while (running) {
                 try {
-                    discordRichPresence.details = "Name » " + WaterMark.getUsername();
-                    discordRichPresence.state = "UID » " + WaterMark.getUID();
+                    discordRichPresence.details = "Name » " + (mc.getSession() == null ? "Player" : mc.getSession().getUsername());
+                    discordRichPresence.state = "Crick Client";
                     discordRichPresence.largeImageKey = image;
                     discordRichPresence.button_label_1 = "Купить";
                     discordRichPresence.button_url_1 = site;

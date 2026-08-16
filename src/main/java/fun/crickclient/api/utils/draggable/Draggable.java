@@ -246,6 +246,28 @@ public class Draggable implements QClient {
         }
     }
 
+    /**
+     * Текущий угол «покачивания» элемента при перетаскивании (в градусах).
+     */
+    public float getWobbleAngle() {
+        return dragTiltDegrees;
+    }
+
+    /**
+     * Наведён ли курсор на область элемента (координаты — в единицах GUI-скейла).
+     */
+    public boolean isHovering() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.getWindow() == null || client.mouse == null) {
+            return false;
+        }
+        double scaleFactor = client.getWindow().getScaleFactor();
+        if (scaleFactor <= 0.0D) scaleFactor = 1.0D;
+        double mouseX = client.mouse.getX() / scaleFactor;
+        double mouseY = client.mouse.getY() / scaleFactor;
+        return HoveringUtils.isInRegion(mouseX, mouseY, this.xPos, this.yPos, this.width, this.height);
+    }
+
     public void beginRenderTilt(MatrixStack ms) {
         updateTilt();
         tiltMatrixPushed = false;
