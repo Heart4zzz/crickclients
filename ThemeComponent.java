@@ -18,20 +18,36 @@ public class ThemeComponent extends Component {
 
     @Override
     public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
-        float startX = x + 2;
+        float alpha = getAlphaAnimSetting().getValue() * Math.max(Math.min(getAlphaAnim().getValue(), 1), 0);
+        float totalW = 0;
+        for (Theme theme : option.getThemes()) {
+            totalW += 14;
+        }
+        float startX = x + (width - totalW) / 2f + 2;
         float currentX = startX;
         float circleY = y + 8;
+
         for (Theme theme : option.getThemes()) {
-            theme.checkAnimation.run(option.getValue() == theme);
-            if (theme.checkAnimation.getValue() > 0.01f) {
-                float alphaAnim = theme.checkAnimation.getValue();
+            boolean selected = option.getValue() == theme;
+            theme.checkAnimation.run(selected);
+            boolean hovered = HoverUtil.isHovered(mouseX, mouseY, currentX - 1, circleY - 1, 10, 10);
+
+            // Selection ring
+            if (selected || theme.checkAnimation.getValue() > 0.01f) {
+                float ringAlpha = selected ? 1f : (float) theme.checkAnimation.getValue();
                 DrawUtil.drawRound(currentX - 1.5f, circleY - 1.5f, 11, 11, 5.5f,
-                        ColorProvider.rgba(255, 255, 255, (int)(255 * alphaAnim)));
+                        ColorProvider.rgba(255, 255, 255, (int)(255 * ringAlpha * alpha)));
+            }
+
+            // Hover highlight
+            if (hovered && !selected) {
+                DrawUtil.drawRound(currentX - 1f, circleY - 1f, 10, 10, 5f,
+                        ColorProvider.rgba(255, 255, 255, (int)(15 * alpha)));
             }
 
             theme.x = currentX;
             theme.y = circleY;
-            theme.drawTheme(getAlphaAnimSetting().getValue() * Math.max(Math.min(getAlphaAnim().getValue(), 1), 0));
+            theme.drawTheme(alpha);
 
             currentX += 14;
         }

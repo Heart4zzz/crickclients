@@ -18,10 +18,10 @@ import java.util.List;
 public class ModeListComponent extends Component {
     private final ListSetting setting;
     private static final float NAME_HEIGHT = 10f;
-    private static final float OPTION_H = 11f;
-    private static final float GAP = 2f;
+    private static final float OPTION_H = 12f;
+    private static final float GAP = 3f;
     private static final float PADDING = 4.5f;
-    private static final float RADIUS = 1f;
+    private static final float RADIUS = 4f;
 
     private final List<Animation> anims = new ArrayList<>();
 
@@ -88,14 +88,28 @@ public class ModeListComponent extends Component {
             anim.run(s.isState());
             float av = anim.getValue();
 
-            if (HoverUtil.isHovered(mouseX, mouseY, curX, curY, ow, OPTION_H)) {
+            boolean hovered = HoverUtil.isHovered(mouseX, mouseY, curX, curY, ow, OPTION_H);
+            if (hovered) {
                 CursorManager.requestHand();
             }
 
-            int bgColor = ColorProvider.interpolateColor(
-                    ColorProvider.setAlpha(ColorProvider.getColorInactiveButton(), alphaInt),
-                    ColorProvider.setAlpha(ColorProvider.getColorButton(), alphaInt),
-                    av);
+            // Glow border for selected mode
+            if (av > 0.05f) {
+                DrawUtil.drawRound(curX - 1f, curY - 1f, ow + 2f, OPTION_H + 2f, RADIUS + 1f,
+                        ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (60 * av * alpha)));
+            }
+
+            int bgColor;
+            if (s.isState()) {
+                bgColor = ColorProvider.setAlpha(ColorProvider.getColorButton(), alphaInt);
+            } else if (hovered) {
+                bgColor = ColorProvider.interpolateColor(
+                        ColorProvider.setAlpha(ColorProvider.getColorInactiveButton(), alphaInt),
+                        ColorProvider.setAlpha(ColorProvider.getColorButton(), (int) (45 * alpha)),
+                        0.5f);
+            } else {
+                bgColor = ColorProvider.setAlpha(ColorProvider.getColorInactiveButton(), alphaInt);
+            }
             DrawUtil.drawRound(curX, curY, ow, OPTION_H, RADIUS, bgColor);
 
             int textColor = ColorProvider.interpolateColor(
@@ -103,7 +117,10 @@ public class ModeListComponent extends Component {
                     ColorProvider.setAlpha(ColorProvider.getColorText(), alphaInt),
                     av);
             float tw = GuiFonts.GUI_BODY.get().getWidth(name, 7.5f);
-            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), name, curX + (ow - tw) / 2f, curY + 1.75f, textColor, 7.5f);
+            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), name,
+                    curX + (ow - tw) / 2f,
+                    curY + (OPTION_H - 7.5f) / 2f - 0.5f,
+                    textColor, 7.5f);
 
             curX += ow + GAP;
             i++;

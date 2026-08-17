@@ -87,7 +87,7 @@ public class ThemeEditor implements QClient {
         tabX = anchorRight + 6f;
         tabY = anchorY + anchorH / 2f - TAB_H / 2f;
         popupX = tabX + COLLAPSED_W + 6f;
-        popupY = anchorY + anchorH - popupHeight();
+        popupY = tabY + TAB_H / 2f - popupHeight() / 2f;
 
         renderTab(mouseX, mouseY);
 

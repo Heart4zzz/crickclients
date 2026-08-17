@@ -176,7 +176,7 @@ public class ThemeEditor implements IMinecraft {
         tabX = anchorRight + 6f;
         tabY = anchorY + anchorH / 2f - 28f;
         popupX = tabX + COLLAPSED_W + 6f;
-        popupY = anchorY + anchorH - POPUP_H;
+        popupY = tabY + 28f - POPUP_H / 2f;
 
         renderTab(mouseX, mouseY);
 

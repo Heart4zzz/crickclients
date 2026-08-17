@@ -125,7 +125,7 @@ public class ClickGuiShell implements QClient {
 
         float profileY = sy + 10f;
         float avatarSize = 18f;
-        float avatarX = sx + 10f;
+        float avatarX = sx + 12f;
         float textBlockH = 15f;
         float avatarY = profileY + (textBlockH - avatarSize) / 2f + 0.5f;
 
@@ -134,16 +134,22 @@ public class ClickGuiShell implements QClient {
                 ? "?"
                 : String.valueOf(Character.toUpperCase(username.charAt(0)));
 
+        // Avatar background with accent
         DrawUtil.drawRound(avatarX, avatarY, avatarSize, avatarSize, avatarSize / 2f,
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (70 * alpha)));
+                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (60 * alpha)));
+        // Avatar accent ring
+        DrawUtil.drawRound(avatarX - 0.5f, avatarY - 0.5f, avatarSize + 1f, avatarSize + 1f, (avatarSize + 1f) / 2f,
+                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (30 * alpha)));
         ClickGuiStyles.drawCenteredGuiTitle(initial, avatarX, avatarY, avatarSize, avatarSize, alpha, 7.5f);
 
+        // Username - bright text, subtitle - muted
         String user = username == null ? "" : username;
-        if (user.length() > 9) user = user.substring(0, 8) + "…";
-        ClickGuiStyles.drawGuiBody(user, sx + 32f, profileY + 1f, alpha, 6.5f);
-        ClickGuiStyles.drawGuiBody("CrickClient", sx + 32f, profileY + 9.5f, alpha * 0.7f, 5.5f);
+        DrawUtil.drawText(GuiFonts.GUI_TITLE.get(), user, sx + 34f, profileY + 1f,
+                ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (235 * alpha)), 6.5f,
+                0.4f, 1f, sw - 38f);
+        ClickGuiStyles.drawGuiBody("CrickClient", sx + 34f, profileY + 9.5f, alpha * 0.55f, 5.5f);
 
-        DrawUtil.drawRound(sx + 8f, sy + 34f, sw - 16f, 0.5f, 0.25f,
+        DrawUtil.drawRound(sx + 8f, sy + 36f, sw - 16f, 0.5f, 0.25f,
                 ColorProvider.rgba(255, 255, 255, (int) (10 * alpha)));
 
         float itemY = sy + 42f;
@@ -179,7 +185,8 @@ public class ClickGuiShell implements QClient {
         if (hover) CursorManager.requestHand();
         if (selected) {
             DrawUtil.drawRound(sx + 6f, itemY, sw - 12f, ROW_H, 5f, ColorProvider.rgba(255, 255, 255, (int) (10 * alpha)));
-            DrawUtil.drawRound(sx + 6f, itemY, 2f, ROW_H, 1f, ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (230 * alpha)));
+            // Accent left bar
+            DrawUtil.drawRound(sx + 6f, itemY + 2f, 2.5f, ROW_H - 4f, 1.25f, ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (240 * alpha)));
         } else if (hover) {
             DrawUtil.drawRound(sx + 6f, itemY, sw - 12f, ROW_H, 5f, ColorProvider.rgba(255, 255, 255, (int) (5 * alpha)));
         }
@@ -191,13 +198,13 @@ public class ClickGuiShell implements QClient {
 
         int iconColor = selected
                 ? ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (255 * alpha))
-                : ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) (160 * alpha));
-        DrawUtil.drawText(GuiFonts.ICONS_MINCED.get(), icon, sx + 12f, iconY, iconColor, iconSize);
+                : ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) (140 * alpha));
+        DrawUtil.drawText(GuiFonts.ICONS_MINCED.get(), icon, sx + 14f, iconY, iconColor, iconSize);
 
         int textColor = selected
                 ? ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha))
-                : ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (200 * alpha));
-        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), label, sx + 24f, textY, textColor, textSize);
+                : ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (180 * alpha));
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), label, sx + 26f, textY, textColor, textSize);
     }
 
     private boolean hover(int mouseX, int mouseY, float sx, float itemY, float sw) {
