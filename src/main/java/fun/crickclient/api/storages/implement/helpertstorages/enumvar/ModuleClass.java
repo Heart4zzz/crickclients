@@ -117,7 +117,8 @@ public class ModuleClass extends GlobalObject<Module> implements ModuleRewords {
                 triggerBot,
                 viewModel,
                 worldTweaks,
-                xCarry
+                xCarry,
+                katana
         );
     }
 
