@@ -120,17 +120,50 @@ public final class MsdfFont implements QClient {
     }
 
     private static String replaceSymbols(String text) {
-        if (text == null) return "";
-        return text
-                .replace("ᴀ", "A").replace("ʙ", "B").replace("ᴄ", "C")
-                .replace("ᴅ", "D").replace("ᴇ", "E").replace("ғ", "F")
-                .replace("ɢ", "G").replace("ʜ", "H").replace("ɪ", "I")
-                .replace("ᴊ", "J").replace("ᴋ", "K").replace("ʟ", "L")
-                .replace("ᴍ", "M").replace("ɴ", "N").replace("ᴏ", "O")
-                .replace("ᴘ", "P").replace("ǫ", "Q").replace("ʀ", "R")
-                .replace("ꜱ", "S").replace("ᴛ", "T").replace("ᴜ", "U")
-                .replace("ᴠ", "V").replace("ᴡ", "W").replace("ʏ", "Y")
-                .replace("ᴢ", "Z").replace("ꜰ", "F");
+        if (text == null || text.isEmpty()) return "";
+        int length = text.length();
+        for (int i = 0; i < length; i++) {
+            if (text.charAt(i) >= '\u1D00') {
+                return replaceSmallCaps(text);
+            }
+        }
+        return text;
+    }
+
+    private static String replaceSmallCaps(String text) {
+        StringBuilder out = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            out.append(switch (c) {
+                case 'ᴀ' -> 'A';
+                case 'ʙ' -> 'B';
+                case 'ᴄ' -> 'C';
+                case 'ᴅ' -> 'D';
+                case 'ᴇ' -> 'E';
+                case 'ғ', 'ꜰ' -> 'F';
+                case 'ɢ' -> 'G';
+                case 'ʜ' -> 'H';
+                case 'ɪ' -> 'I';
+                case 'ᴊ' -> 'J';
+                case 'ᴋ' -> 'K';
+                case 'ʟ' -> 'L';
+                case 'ᴍ' -> 'M';
+                case 'ɴ' -> 'N';
+                case 'ᴏ' -> 'O';
+                case 'ᴘ' -> 'P';
+                case 'ǫ' -> 'Q';
+                case 'ʀ' -> 'R';
+                case 'ꜱ' -> 'S';
+                case 'ᴛ' -> 'T';
+                case 'ᴜ' -> 'U';
+                case 'ᴠ' -> 'V';
+                case 'ᴡ' -> 'W';
+                case 'ʏ' -> 'Y';
+                case 'ᴢ' -> 'Z';
+                default -> c;
+            });
+        }
+        return out.toString();
     }
 
     private static String readResource(Identifier identifier) {

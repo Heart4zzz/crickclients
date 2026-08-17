@@ -32,6 +32,7 @@ import fun.crickclient.api.events.EventInvoker;
 import fun.crickclient.api.events.implement.EventRender;
 import fun.crickclient.api.storages.implement.helpertstorages.enumvar.ModuleClass;
 import fun.crickclient.api.utils.SidebarEntry;
+import fun.crickclient.api.utils.render.RenderUtils;
 import fun.crickclient.api.utils.render.blur.BlurProgram;
 import fun.crickclient.client.modules.impl.misc.NameProtect;
 
@@ -65,8 +66,12 @@ public class InGameGuiMixin implements QClient {
     @Inject(method = "render", at = @At("HEAD"))
     private void render(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
         BlurProgram.getInstance().beginFrame();
-        if (EventInvoker.hasListeners(EventRender.Default.class)) {
-            new EventRender.Default(context, tickCounter.getTickDelta(true)).call();
+        try {
+            if (EventInvoker.hasListeners(EventRender.Default.class)) {
+                new EventRender.Default(context, tickCounter.getTickDelta(true)).call();
+            }
+        } finally {
+            RenderUtils.restoreHudGlState();
         }
     }
 

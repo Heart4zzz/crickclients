@@ -61,7 +61,6 @@ public class EventInvoker
             }
 
             Method method = invocation.method();
-            method.setAccessible(true);
             long handlerStart = PERF_DEBUG ? System.nanoTime() : 0L;
             try
             {

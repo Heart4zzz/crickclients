@@ -871,6 +871,9 @@ public class EntityESP extends Module {
         if (entity == null || entity.isRemoved() || entity instanceof ArmorStandEntity) {
             return false;
         }
+        if (hasProjection && isOutsideRenderDistance(entity)) {
+            return false;
+        }
         if (entity instanceof PlayerEntity player) {
             return shouldProcessPlayer(player, false);
         }

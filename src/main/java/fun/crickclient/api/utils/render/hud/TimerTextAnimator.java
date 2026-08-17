@@ -27,6 +27,11 @@ public final class TimerTextAnimator {
         state.update(text);
 
         long now = System.currentTimeMillis();
+        if (!state.isAnimating(now, text.length())) {
+            font.drawStringNoOffset(matrices, text, x, y, color);
+            return;
+        }
+
         int alpha = (color >>> 24) & 0xFF;
         float height = font.getSize() * 0.5f;
         float cursor = x;
@@ -85,6 +90,17 @@ public final class TimerTextAnimator {
             previous = current;
             current = text;
             changedAt = next;
+        }
+
+        private boolean isAnimating(long now, int length) {
+            int limit = Math.min(length, changedAt.length);
+            for (int i = 0; i < limit; i++) {
+                long at = changedAt[i];
+                if (at > 0L && now - at < DURATION_MS) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private long changedAt(int index) {

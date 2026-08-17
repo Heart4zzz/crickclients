@@ -49,6 +49,7 @@ import fun.crickclient.api.utils.math.HoveringUtils;
 import fun.crickclient.api.utils.notification.NotificationManager;
 import fun.crickclient.api.utils.player.Counter;
 import fun.crickclient.api.utils.render.RenderUtils;
+import fun.crickclient.api.utils.render.blur.BlurProgram;
 import fun.crickclient.api.utils.render.fonts.msdf.Font;
 import fun.crickclient.api.utils.render.fonts.msdf.Fonts;
 import fun.crickclient.api.utils.render.hud.HudShine;
@@ -77,7 +78,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+
 
 /**
  * HUD клиента: ватермарка, инфо-строка, таргет худ, бинды, стафф-лист, бафы, кулдауны,
@@ -332,6 +333,13 @@ public class Interface extends Module {
 
         notificationsPopup.extraRows.add(new PopupRow(PopupKind.TOGGLE, "Состояния модулей", notifModuleStates, null));
         notificationsPopup.extraRows.add(new PopupRow(PopupKind.TOGGLE, "Снос тотема", notifTotem, null));
+    }
+
+    @Override
+    public void onDisable() {
+        BlurProgram.getInstance().cancel();
+        RenderUtils.restoreHudGlState();
+        super.onDisable();
     }
 
     public Interface() {
@@ -988,6 +996,7 @@ public class Interface extends Module {
 
     // ===================== Активные модераторы =====================
     private final List<Staff> staffPlayers = new ArrayList<>();
+    private final Map<String, Staff> staffByName = new HashMap<>();
     private final Pattern namePattern = Pattern.compile("^\\w{3,16}$");
     private final Pattern prefixMatches = Pattern.compile(".*(ꔷ|ꔳ|ꔩ|ꔥ|ꔡ|ꔗ|ꔓ|\\bmod\\b|\\badm\\b|\\bhelp\\b|\\bwne\\b|модер|хелп|помощ|админ|владел|отриц|\\btaf\\b|\\bcurat\\b|куратор|\\bdev\\b|разраб|\\bsupp\\b|саппорт|\\byt\\b|\\[yt\\]|ютуб|стажер|сотрудник).*");
 
@@ -1144,24 +1153,30 @@ public class Interface extends Module {
             if ((isValidName && notSelf && matchesPrefix) || (isValidName && notSelf && vanish) || markedStaff) {
                 if (markedStaff && isShopName(name)) continue;
 
-                Optional<Staff> existingStaff = staffPlayers.stream().filter(s -> s.name.equals(name)).findFirst();
+                Staff existingStaff = staffByName.get(name);
                 Status status = vanish ? Status.VANISHED : (isGM3 ? Status.VANISHED : Status.NONE);
 
-                if (existingStaff.isPresent()) {
-                    Staff staff = existingStaff.get();
-                    staff.isOnServer = true;
-                    staff.status = status;
+                if (existingStaff != null) {
+                    existingStaff.isOnServer = true;
+                    existingStaff.status = status;
                 } else if (!isShopName(name)) {
                     Text prefix = trimPrefixToNick(playerListEntry.getDisplayName(), name);
                     Staff staff = new Staff(prefix == null ? Text.of(playerListEntry.getProfile().getName()) : prefix,
                             name, vanish || isGM3, status);
                     staff.isOnServer = true;
                     staffPlayers.add(staff);
+                    staffByName.put(name, staff);
                 }
             }
         }
 
-        staffPlayers.removeIf(staff -> !staff.isOnServer && staff.animation.getValue() == 0);
+        staffPlayers.removeIf(staff -> {
+            if (!staff.isOnServer && staff.animation.getValue() == 0) {
+                staffByName.remove(staff.name);
+                return true;
+            }
+            return false;
+        });
     }
 
     private static final String[] SHOP_NAMES = {
@@ -1641,6 +1656,7 @@ public class Interface extends Module {
     }
 
     private final List<PotionItem> potionItems = new CopyOnWriteArrayList<>();
+    private final Map<String, StatusEffectInstance> potionLookup = new HashMap<>();
 
     private RegistryEntry<StatusEffect> currentRandomEffect;
     private long lastEffectChange = 0;
@@ -1648,16 +1664,15 @@ public class Interface extends Module {
     private static final Random RANDOM = new Random();
 
     private void updatePotions() {
-        Map<String, StatusEffectInstance> currentEffects = mc.player.getStatusEffects().stream()
-                .collect(Collectors.toMap(
-                        e -> Text.translatable(e.getTranslationKey()).getString() + ":" + e.getAmplifier(),
-                        e -> e,
-                        (first, second) -> first
-                ));
+        potionLookup.clear();
+        for (StatusEffectInstance effect : mc.player.getStatusEffects()) {
+            String key = Text.translatable(effect.getTranslationKey()).getString() + ":" + effect.getAmplifier();
+            potionLookup.putIfAbsent(key, effect);
+        }
 
-        potionItems.forEach(item -> {
+        for (PotionItem item : potionItems) {
             String key = item.name + ":" + item.amplifier;
-            StatusEffectInstance effect = currentEffects.get(key);
+            StatusEffectInstance effect = potionLookup.remove(key);
 
             if (effect != null) {
                 item.durationTicks = effect.getDuration();
@@ -1668,23 +1683,23 @@ public class Interface extends Module {
                     item.animation.setValue(1.0f);
                 }
                 item.active = true;
-                currentEffects.remove(key);
             } else {
                 item.active = false;
             }
-        });
+        }
 
-        boolean added = !currentEffects.isEmpty();
-        currentEffects.forEach((key, effect) -> potionItems.add(new PotionItem(
-                Text.translatable(effect.getTranslationKey()).getString(),
-                effect.getAmplifier(),
-                effect.getDuration(),
-                effect.getEffectType()
-        )));
+        boolean added = !potionLookup.isEmpty();
+        for (StatusEffectInstance effect : potionLookup.values()) {
+            potionItems.add(new PotionItem(
+                    Text.translatable(effect.getTranslationKey()).getString(),
+                    effect.getAmplifier(),
+                    effect.getDuration(),
+                    effect.getEffectType()
+            ));
+        }
 
         boolean removed = potionItems.removeIf(item -> !item.active && item.animation.getValue() == 0);
 
-        // Сортируем только когда набор изменился, а не каждый кадр в рендере
         if (added || removed) {
             potionItems.sort(Comparator.comparing(item -> item.name));
         }
@@ -2569,23 +2584,11 @@ public class Interface extends Module {
         return String.valueOf(Math.max(rounded, 0));
     }
 
-    /** Текстура «лица» энтити: у игрока — скин, у моба — текстура его рендерера. */
-    @SuppressWarnings({"rawtypes", "unchecked"})
+    /** Текстура «лица»: только скин игрока. Рендерер моба не трогаем — getAndUpdateRenderState ломает кадр. */
     private Identifier getEntityFaceTexture(LivingEntity entity, AbstractClientPlayerEntity player) {
         try {
             if (player != null) {
                 return player.getSkinTextures().texture();
-            }
-            net.minecraft.client.render.entity.EntityRenderer baseRenderer =
-                    mc.getEntityRenderDispatcher().getRenderer(entity);
-            if (baseRenderer instanceof net.minecraft.client.render.entity.LivingEntityRenderer renderer) {
-                float tickDelta = mc.getRenderTickCounter().getTickDelta(false);
-                net.minecraft.client.render.entity.state.LivingEntityRenderState state =
-                        (net.minecraft.client.render.entity.state.LivingEntityRenderState)
-                                renderer.getAndUpdateRenderState(entity, tickDelta);
-                if (state != null) {
-                    return renderer.getTexture(state);
-                }
             }
         } catch (Exception ignored) {
         }
