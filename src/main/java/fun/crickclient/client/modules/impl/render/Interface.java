@@ -153,7 +153,7 @@ public class Interface extends Module {
     // ===================== Настройки элементов (скрыты в ClickGui) =====================
     // Potions
     private final BooleanSetting potionsBlur = hidden(new BooleanSetting("Блюр бафов", true));
-    private final FloatSetting potionsSize = hidden(new FloatSetting("Размер бафов", 0.65f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting potionsSize = hidden(new FloatSetting("Размер бафов", 0.85f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting potionsAlpha = hidden(new FloatSetting("Прозрачность бафов", 180f, 0f, 255f, 1f));
     private final BooleanSetting potionsRing = hidden(new BooleanSetting("Кольцо таймер", true));
     private final BooleanSetting potionsShine = hidden(new BooleanSetting("Блик бафов", true));
@@ -163,7 +163,7 @@ public class Interface extends Module {
 
     // Keybinds
     private final BooleanSetting keybindsBlur = hidden(new BooleanSetting("Блюр кейбиндов", true));
-    private final FloatSetting keybindsSize = hidden(new FloatSetting("Размер кейбиндов", 0.65f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting keybindsSize = hidden(new FloatSetting("Размер кейбиндов", 0.85f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting keybindsAlpha = hidden(new FloatSetting("Прозрачность кейбиндов", 180f, 0f, 255f, 1f));
     private final BooleanSetting keybindsShine = hidden(new BooleanSetting("Блик кейбиндов", true));
     private final FloatSetting keybindsShineAlpha = hidden(new FloatSetting("Прозрачность блика кб", 30f, 0f, 100f, 1f));
@@ -172,7 +172,7 @@ public class Interface extends Module {
 
     // StaffList
     private final BooleanSetting stafflistBlur = hidden(new BooleanSetting("Блюр стафф", true));
-    private final FloatSetting stafflistSize = hidden(new FloatSetting("Размер стафф", 0.65f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting stafflistSize = hidden(new FloatSetting("Размер стафф", 0.85f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting stafflistAlpha = hidden(new FloatSetting("Прозрачность стафф", 180f, 0f, 255f, 1f));
     private final BooleanSetting stafflistShine = hidden(new BooleanSetting("Блик стафф", true));
     private final FloatSetting stafflistShineAlpha = hidden(new FloatSetting("Прозрачность блика стафф", 30f, 0f, 100f, 1f));
@@ -181,7 +181,7 @@ public class Interface extends Module {
 
     // CoolDowns
     private final BooleanSetting cooldownsBlur = hidden(new BooleanSetting("Блюр кд", true));
-    private final FloatSetting cooldownsSize = hidden(new FloatSetting("Размер кд", 0.65f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting cooldownsSize = hidden(new FloatSetting("Размер кд", 0.85f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting cooldownsAlpha = hidden(new FloatSetting("Прозрачность кд", 180f, 0f, 255f, 1f));
     private final BooleanSetting cooldownsRing = hidden(new BooleanSetting("Кольцо таймер кд", true));
     private final BooleanSetting cooldownsShine = hidden(new BooleanSetting("Блик кд", true));
@@ -191,7 +191,7 @@ public class Interface extends Module {
 
     // ServerHelper
     private final BooleanSetting serverHelperBlur = hidden(new BooleanSetting("Блюр ServerHelper", true));
-    private final FloatSetting serverHelperSize = hidden(new FloatSetting("Размер ServerHelper", 0.65f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting serverHelperSize = hidden(new FloatSetting("Размер ServerHelper", 0.85f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting serverHelperAlpha = hidden(new FloatSetting("Прозрачность ServerHelper", 180f, 0f, 255f, 1f));
     private final BooleanSetting serverHelperShine = hidden(new BooleanSetting("Блик ServerHelper", true));
     private final FloatSetting serverHelperShineAlpha = hidden(new FloatSetting("Прозрачность блика ServerHelper", 30f, 0f, 100f, 1f));
@@ -200,7 +200,7 @@ public class Interface extends Module {
 
     // Watermark
     private final BooleanSetting wmBlur = hidden(new BooleanSetting("Блюр вм", true));
-    private final FloatSetting wmSize = new FloatSetting("Размер вм", 0.65f, 0.5f, 1.5f, 0.05f);
+    private final FloatSetting wmSize = new FloatSetting("Размер вм", 0.85f, 0.5f, 1.5f, 0.05f);
     private final FloatSetting wmAlpha = hidden(new FloatSetting("Прозрачность вм", 180f, 0f, 255f, 1f));
     private final BooleanSetting wmShine = hidden(new BooleanSetting("Блик вм", true));
     private final FloatSetting wmShineAlpha = hidden(new FloatSetting("Прозрачность блика вм", 30f, 0f, 100f, 1f));
@@ -212,7 +212,7 @@ public class Interface extends Module {
 
     // Info
     private final BooleanSetting infoBlur = hidden(new BooleanSetting("Блюр инфо", true));
-    private final FloatSetting infoSize = new FloatSetting("Размер инфо", 0.70f, 0.5f, 1.5f, 0.05f);
+    private final FloatSetting infoSize = new FloatSetting("Размер инфо", 0.90f, 0.5f, 1.5f, 0.05f);
     private final FloatSetting infoAlpha = hidden(new FloatSetting("Прозрачность инфо", 180f, 0f, 255f, 1f));
     private final BooleanSetting infoShine = hidden(new BooleanSetting("Блик инфо", true));
     private final FloatSetting infoShineAlpha = hidden(new FloatSetting("Прозрачность блика инфо", 30f, 0f, 100f, 1f));
@@ -221,7 +221,7 @@ public class Interface extends Module {
 
     // CustomHotbar
     private final BooleanSetting hotbarBlur = hidden(new BooleanSetting("Блюр хотбар", true));
-    private final FloatSetting hotbarSize = hidden(new FloatSetting("Размер хотбар", 0.95f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting hotbarSize = hidden(new FloatSetting("Размер хотбар", 1.05f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting hotbarAlpha = hidden(new FloatSetting("Прозрачность хотбар", 180f, 0f, 255f, 1f));
     private final BooleanSetting hotbarShine = hidden(new BooleanSetting("Блик хотбар", true));
     private final FloatSetting hotbarShineAlpha = hidden(new FloatSetting("Прозрачность блика хотбар", 30f, 0f, 100f, 1f));
@@ -231,7 +231,7 @@ public class Interface extends Module {
 
     // ArmourBar
     private final BooleanSetting armourBlur = hidden(new BooleanSetting("Блюр броня", true));
-    private final FloatSetting armourSize = hidden(new FloatSetting("Размер броня", 0.95f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting armourSize = hidden(new FloatSetting("Размер броня", 1.05f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting armourAlpha = hidden(new FloatSetting("Прозрачность броня", 180f, 0f, 255f, 1f));
     private final BooleanSetting armourShine = hidden(new BooleanSetting("Блик броня", true));
     private final FloatSetting armourShineAlpha = hidden(new FloatSetting("Прозрачность блика броня", 30f, 0f, 100f, 1f));
@@ -241,7 +241,7 @@ public class Interface extends Module {
 
     // TotemBar
     private final BooleanSetting totemBarBlur = hidden(new BooleanSetting("Блюр тотем-бар", true));
-    private final FloatSetting totemBarSize = hidden(new FloatSetting("Размер тотем-бар", 0.95f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting totemBarSize = hidden(new FloatSetting("Размер тотем-бар", 1.05f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting totemBarAlpha = hidden(new FloatSetting("Прозрачность тотем-бар", 180f, 0f, 255f, 1f));
     private final BooleanSetting totemBarShine = hidden(new BooleanSetting("Блик тотем-бар", true));
     private final FloatSetting totemBarShineAlpha = hidden(new FloatSetting("Прозрачность блика тотем-бар", 30f, 0f, 100f, 1f));
@@ -250,7 +250,7 @@ public class Interface extends Module {
 
     // TargetHUD
     private final BooleanSetting thBlur = hidden(new BooleanSetting("Блюр тх", true));
-    private final FloatSetting thSize = hidden(new FloatSetting("Размер тх", 0.85f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting thSize = hidden(new FloatSetting("Размер тх", 1.00f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting thAlpha = hidden(new FloatSetting("Прозрачность тх", 180f, 0f, 255f, 1f));
     private final BooleanSetting thShine = hidden(new BooleanSetting("Блик тх", true));
     private final FloatSetting thShineAlpha = hidden(new FloatSetting("Прозрачность блика тх", 30f, 0f, 100f, 1f));
@@ -261,7 +261,7 @@ public class Interface extends Module {
 
     // Notifications
     private final BooleanSetting ntBlur = hidden(new BooleanSetting("Блюр notif", true));
-    private final FloatSetting ntSize = hidden(new FloatSetting("Размер notif", 0.80f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting ntSize = hidden(new FloatSetting("Размер notif", 0.95f, 0.5f, 2.0f, 0.05f));
     private final FloatSetting ntAlpha = hidden(new FloatSetting("Прозрачность notif", 180f, 0f, 255f, 1f));
     private final BooleanSetting ntShine = hidden(new BooleanSetting("Блик notif", true));
     private final FloatSetting ntShineAlpha = hidden(new FloatSetting("Прозрачность блика notif", 30f, 0f, 100f, 1f));
@@ -552,6 +552,7 @@ public class Interface extends Module {
     private final TimedAnimation animation = new TimedAnimation(Easings.EXPO_OUT, 300);
     private final TimedAnimation armorAnim = new TimedAnimation(Easings.EXPO_OUT, 300);
     private final TimedAnimation hpAnimation = new TimedAnimation(Easings.EXPO_OUT, 600);
+    private final TimedAnimation absorptionAnimation = new TimedAnimation(Easings.EXPO_OUT, 600);
     private final TimedAnimation alpha = new TimedAnimation(Easings.EXPO_OUT, 200);
     private final TimedAnimation alpha2 = new TimedAnimation(Easings.EXPO_OUT, 200);
     private final TimedAnimation alpha3 = new TimedAnimation(Easings.EXPO_OUT, 200);
@@ -2478,19 +2479,34 @@ public class Interface extends Module {
         String shownName = trimTextToWidth(name, 8.5f, Math.max(20f, nameMaxW));
         drawText(shownName, textX, y + 8f, HudColors.rgba(255, 255, 255, alphaInt), 8.5f);
 
-        float currentHp = getEntityHealth(livingEntity);
-        if (Float.isNaN(currentHp) || currentHp < 0) currentHp = 0;
+        float health = livingEntity.getHealth();
+        if (Float.isNaN(health) || health < 0) health = 0;
+
+        float absorption = livingEntity.getAbsorptionAmount();
+        if (Float.isNaN(absorption) || absorption < 0) absorption = 0;
+
+        float currentHp = health + absorption;
 
         float maxHealth = Math.max(livingEntity.getMaxHealth(), 1f);
-        float healthFrac = MathHelper.clamp(currentHp / maxHealth, 0f, 1f);
+        // Золотые сердца добавляются к «вместимости» кольца, поэтому жёлтая полоска
+        // становится тем длиннее, чем больше абсорбции у цели.
+        float ringCapacity = Math.max(maxHealth + absorption, 1f);
+        float healthFrac = MathHelper.clamp(health / ringCapacity, 0f, 1f);
+        float absorptionFrac = MathHelper.clamp(absorption / ringCapacity, 0f, 1f - healthFrac);
+
         hpAnimation.run(healthFrac);
-        float ringProgress = (float) hpAnimation.getValue();
+        absorptionAnimation.run(healthFrac + absorptionFrac);
+
+        float ringProgress = MathHelper.clamp((float) hpAnimation.getValue(), 0f, 1f);
+        float absorptionProgress = MathHelper.clamp((float) absorptionAnimation.getValue(), ringProgress, 1f);
 
         int trackColor = HudColors.rgba(255, 255, 255, 28);
         int fillColor = currentHp <= lowHpAlertThreshold.get()
                 ? HudColors.rgba(255, 80, 80, 255)
                 : HudColors.getColorClient();
-        drawCircularHealthRing(ringCX, ringCY, ringRadius, ringThick, ringProgress, trackColor, fillColor, alphaInt);
+        int absorptionColor = HudColors.rgba(255, 205, 60, 255);
+        drawCircularHealthRing(ringCX, ringCY, ringRadius, ringThick, ringProgress, absorptionProgress,
+                trackColor, fillColor, absorptionColor, alphaInt);
 
         String hpText = formatHealthDisplay(currentHp);
         float hpTextW = width(hpText, 7.5f);
@@ -2532,21 +2548,25 @@ public class Interface extends Module {
     }
 
     private void drawCircularHealthRing(float cx, float cy, float radius, float thickness,
-                                        float progress, int trackColor, int fillColor, int alphaInt) {
+                                        float progress, float absorptionProgress,
+                                        int trackColor, int fillColor, int absorptionColor, int alphaInt) {
         drawRingArc(cx, cy, radius, thickness, -90f, 270f, HudColors.setAlpha(trackColor, alphaInt));
+        if (absorptionProgress > progress + 0.001f) {
+            // Жёлтая полоска золотых сердец продолжает обычную полоску здоровья.
+            drawRingArc(cx, cy, radius, thickness, -90f + 360f * progress, -90f + 360f * absorptionProgress,
+                    HudColors.setAlpha(absorptionColor, alphaInt));
+        }
         if (progress > 0.001f) {
             drawRingArc(cx, cy, radius, thickness, -90f, -90f + 360f * progress,
                     HudColors.setAlpha(fillColor, alphaInt));
         }
     }
 
-    private float getEntityHealth(LivingEntity entity) {
-        return entity.getHealth() + entity.getAbsorptionAmount();
-    }
-
+    /** ХП в таргет худе показываем целым числом: 16.4 -> 16, 6.3 -> 6. */
     private String formatHealthDisplay(float health) {
-        if (health >= 10f) return String.valueOf((int) health);
-        return String.format(Locale.US, "%.1f", health);
+        int rounded = Math.round(health);
+        if (rounded <= 0 && health > 0f) rounded = 1;
+        return String.valueOf(Math.max(rounded, 0));
     }
 
     /** Текстура «лица» энтити: у игрока — скин, у моба — текстура его рендерера. */

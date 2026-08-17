@@ -35,6 +35,7 @@ public interface ModuleRewords {
     AutoTrap autoTrap = AutoTrap.INSTANCE;
     BlockOverlay blockOverlay = BlockOverlay.INSTANCE;
     ClickPearl clickPearl = ClickPearl.INSTANCE;
+    ClickGui clickGui = ClickGui.INSTANCE;
     Cosmetics cosmetics = Cosmetics.INSTANCE;
     Cubes cubes = Cubes.INSTANCE;
     KillEffect killEffect = KillEffect.INSTANCE;

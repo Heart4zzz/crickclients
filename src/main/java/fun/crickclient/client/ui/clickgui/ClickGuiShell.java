@@ -1,19 +1,19 @@
-package zov.crickclient.ui;
+package fun.crickclient.client.ui.clickgui;
 
 import lombok.Getter;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.math.MathHelper;
 import org.joml.Vector4f;
-import zov.crickclient.module.ModuleCategory;
-import zov.crickclient.ui.component.SearchField;
-import zov.crickclient.util.IMinecraft;
-import zov.crickclient.util.cursor.CursorManager;
-import zov.crickclient.util.render.helper.HoverUtil;
-import zov.crickclient.util.render.math.Animation;
-import zov.crickclient.util.render.math.Easing;
-import zov.crickclient.util.render.msdf.Fonts;
-import zov.crickclient.util.render.providers.ColorProvider;
-import zov.crickclient.util.render.renderers.DrawUtil;
+import fun.crickclient.client.modules.Module;
+import fun.crickclient.client.ui.clickgui.component.SearchField;
+import fun.crickclient.api.QClient;
+import fun.crickclient.client.ui.clickgui.util.CursorManager;
+import fun.crickclient.client.ui.clickgui.util.HoverUtil;
+import fun.crickclient.client.ui.clickgui.util.Animation;
+import fun.crickclient.client.ui.clickgui.util.Easing;
+import fun.crickclient.client.ui.clickgui.util.GuiFonts;
+import fun.crickclient.client.ui.clickgui.util.ColorProvider;
+import fun.crickclient.client.ui.clickgui.util.DrawUtil;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -21,12 +21,14 @@ import java.util.List;
 import java.util.Map;
 
 @Getter
-public class ClickGuiShell implements IMinecraft {
+public class ClickGuiShell implements QClient {
     private static final float ROW_H = 19f;
     private static final float SECTION_GAP = 3f;
     private static final float HEADER_H = 10f;
+    /** Глиф иконки вкладки «Configs» в шрифте иконок. */
+    private static final String CONFIG_ICON = "J";
 
-    private record SidebarEntry(String icon, String label, ModuleCategory category) {
+    private record SidebarEntry(String icon, String label, Module.ModuleCategory category) {
     }
 
     private record SidebarSection(String title, SidebarEntry[] entries) {
@@ -34,29 +36,29 @@ public class ClickGuiShell implements IMinecraft {
 
     private static final SidebarSection[] MODULE_SECTIONS = {
             new SidebarSection("Combat", new SidebarEntry[]{
-                    new SidebarEntry("a", "Combat", ModuleCategory.COMBAT),
-                    new SidebarEntry("b", "Movement", ModuleCategory.MOVEMENT),
+                    new SidebarEntry(Module.ModuleCategory.COMBAT.getIcons(), "Combat", Module.ModuleCategory.COMBAT),
+                    new SidebarEntry(Module.ModuleCategory.MOVEMENT.getIcons(), "Movement", Module.ModuleCategory.MOVEMENT),
             }),
             new SidebarSection("Visuals", new SidebarEntry[]{
-                    new SidebarEntry("c", "Render", ModuleCategory.RENDER),
+                    new SidebarEntry(Module.ModuleCategory.RENDER.getIcons(), "Render", Module.ModuleCategory.RENDER),
             }),
             new SidebarSection("Player", new SidebarEntry[]{
-                    new SidebarEntry("d", "Player", ModuleCategory.PLAYER),
+                    new SidebarEntry(Module.ModuleCategory.PLAYER.getIcons(), "Player", Module.ModuleCategory.PLAYER),
             }),
             new SidebarSection("Other", new SidebarEntry[]{
-                    new SidebarEntry("e", "Misc", ModuleCategory.MISC),
+                    new SidebarEntry(Module.ModuleCategory.MISC.getIcons(), "Misc", Module.ModuleCategory.MISC),
             }),
     };
 
     private final ClickGuiFrame parent;
-    private final Map<ModuleCategory, Panel> panels = new EnumMap<>(ModuleCategory.class);
+    private final Map<Module.ModuleCategory, Panel> panels = new EnumMap<>(Module.ModuleCategory.class);
     private final SearchField searchField;
     private final ConfigPanel configPanel = new ConfigPanel();
     private final Animation openAnim = new Animation(Easing.QUINTIC_OUT, 360);
     private final Animation categoryAnim = new Animation(Easing.QUINTIC_OUT, 240);
 
-    private ModuleCategory selectedCategory = ModuleCategory.COMBAT;
-    private ModuleCategory displayedCategory = ModuleCategory.COMBAT;
+    private Module.ModuleCategory selectedCategory = Module.ModuleCategory.COMBAT;
+    private Module.ModuleCategory displayedCategory = Module.ModuleCategory.COMBAT;
     private boolean configView;
 
     public float x, y, width, height;
@@ -66,7 +68,7 @@ public class ClickGuiShell implements IMinecraft {
     public ClickGuiShell(ClickGuiFrame parent, SearchField searchField) {
         this.parent = parent;
         this.searchField = searchField;
-        for (ModuleCategory category : ModuleCategory.values()) {
+        for (Module.ModuleCategory category : Module.ModuleCategory.values()) {
             panels.put(category, new Panel(category, parent));
         }
     }
@@ -81,12 +83,12 @@ public class ClickGuiShell implements IMinecraft {
     }
 
     public void render(DrawContext context, int mouseX, int mouseY, float delta, float alpha) {
-        float open = MathHelper.clamp(openAnim.getValue(), 0f, 1f);
+        float open = MathHelper.clamp((float) openAnim.getValue(), 0f, 1f);
         if (open < 0.01f) return;
 
         if (!configView) {
             categoryAnim.run(selectedCategory == displayedCategory ? 1f : 0f);
-            if (categoryAnim.getValue() < 0.02f && selectedCategory != displayedCategory) {
+            if ((float) categoryAnim.getValue() < 0.02f && selectedCategory != displayedCategory) {
                 displayedCategory = selectedCategory;
                 getActivePanel().setScroll(0f);
                 categoryAnim.reset(0f);
@@ -165,7 +167,7 @@ public class ClickGuiShell implements IMinecraft {
         renderSectionHeader(sx, sw, itemY, "Settings", alpha);
         itemY += HEADER_H;
         configsItemY = itemY;
-        renderSidebarItem(sx, sw, itemY, "f", "Configs", configView,
+        renderSidebarItem(sx, sw, itemY, CONFIG_ICON, "Configs", configView,
                 hover(mouseX, mouseY, sx, itemY, sw), alpha);
     }
 
@@ -190,12 +192,12 @@ public class ClickGuiShell implements IMinecraft {
         int iconColor = selected
                 ? ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (255 * alpha))
                 : ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) (160 * alpha));
-        DrawUtil.drawText(Fonts.ICONS_MINCED.get(), icon, sx + 12f, iconY, iconColor, iconSize);
+        DrawUtil.drawText(GuiFonts.ICONS_MINCED.get(), icon, sx + 12f, iconY, iconColor, iconSize);
 
         int textColor = selected
                 ? ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha))
                 : ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (200 * alpha));
-        DrawUtil.drawText(Fonts.GUI_BODY.get(), label, sx + 24f, textY, textColor, textSize);
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), label, sx + 24f, textY, textColor, textSize);
     }
 
     private boolean hover(int mouseX, int mouseY, float sx, float itemY, float sw) {
@@ -218,7 +220,7 @@ public class ClickGuiShell implements IMinecraft {
         }
     }
 
-    private static String sectionTitleFor(ModuleCategory category) {
+    private static String sectionTitleFor(Module.ModuleCategory category) {
         return switch (category) {
             case COMBAT, MOVEMENT -> "Combat";
             case RENDER -> "Visuals";
@@ -240,7 +242,7 @@ public class ClickGuiShell implements IMinecraft {
         List<ModuleComponent> all = new ArrayList<>();
         for (Panel p : panels.values()) {
             for (ModuleComponent c : p.getModuleComponents()) {
-                if (!parent.searchCheck(c.getModule().getName())) all.add(c);
+                if (!parent.searchCheck(c.getModule().getDisplayName())) all.add(c);
             }
         }
         panel.renderComponents(context, mouseX, mouseY, delta, all);
@@ -268,7 +270,7 @@ public class ClickGuiShell implements IMinecraft {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (!HoverUtil.isHovered(mouseX, mouseY, x, y, width, height)) return false;
-        float drawY = y + (1f - MathHelper.clamp(openAnim.getValue(), 0f, 1f)) * 18f;
+        float drawY = y + (1f - MathHelper.clamp((float) openAnim.getValue(), 0f, 1f)) * 18f;
         if (handleSidebarClick(mouseX, mouseY, drawY, button)) return true;
 
         if (configView) {
@@ -284,7 +286,7 @@ public class ClickGuiShell implements IMinecraft {
         } else if (HoverUtil.isHovered(mouseX, mouseY, contentX, contentY, contentW, contentH)) {
             for (Panel p : panels.values()) {
                 for (ModuleComponent component : p.getModuleComponents()) {
-                    if (!parent.searchCheck(component.getModule().getName())) {
+                    if (!parent.searchCheck(component.getModule().getDisplayName())) {
                         component.mouseClicked(mouseX, mouseY, button);
                     }
                 }
@@ -363,7 +365,25 @@ public class ClickGuiShell implements IMinecraft {
     public void charTyped(char chr, int modifiers) {
         if (configView) {
             configPanel.charTyped(chr, modifiers);
+            return;
         }
+        if (searchField.isEmpty()) {
+            getActivePanel().charTyped(chr, modifiers);
+            return;
+        }
+        for (Panel panel : panels.values()) {
+            panel.charTyped(chr, modifiers);
+        }
+    }
+
+    /** Ждёт ли какой-нибудь модуль ввода текста/бинда. */
+    public boolean isModuleTextFocused() {
+        for (Panel panel : panels.values()) {
+            for (ModuleComponent component : panel.getModuleComponents()) {
+                if (component.isTextFocused()) return true;
+            }
+        }
+        return false;
     }
 
     public boolean isConfigFieldFocused() {
@@ -395,7 +415,7 @@ public class ClickGuiShell implements IMinecraft {
         return height;
     }
 
-    private static String formatCategory(ModuleCategory category) {
+    private static String formatCategory(Module.ModuleCategory category) {
         String name = category.name();
         return name.charAt(0) + name.substring(1).toLowerCase();
     }

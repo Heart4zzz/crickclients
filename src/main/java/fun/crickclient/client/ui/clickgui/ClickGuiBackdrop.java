@@ -1,7 +1,7 @@
-package zov.crickclient.ui;
+package fun.crickclient.client.ui.clickgui;
 
-import zov.crickclient.util.render.providers.ColorProvider;
-import zov.crickclient.util.render.renderers.DrawUtil;
+import fun.crickclient.client.ui.clickgui.util.ColorProvider;
+import fun.crickclient.client.ui.clickgui.util.DrawUtil;
 
 public final class ClickGuiBackdrop {
     private ClickGuiBackdrop() {
