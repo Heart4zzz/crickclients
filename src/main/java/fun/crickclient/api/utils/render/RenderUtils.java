@@ -7,6 +7,7 @@ import net.minecraft.client.gl.GlUniform;
 import net.minecraft.client.gl.ShaderProgram;
 import net.minecraft.client.gl.ShaderProgramKey;
 import net.minecraft.client.gl.ShaderProgramKeys;
+import org.lwjgl.opengl.GL30;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.render.*;
 import net.minecraft.client.texture.AbstractTexture;
@@ -36,6 +37,32 @@ public class RenderUtils implements QClient {
 
     private static final ConcurrentHashMap<String, Identifier> skinCache = new ConcurrentHashMap<>();
     private static final UUID DEFAULT_SKIN_UUID = new UUID(0L, 0L);
+
+    /**
+     * Возвращает GL в состояние, которое ждёт ванильный пайплайн.
+     * Кастомные шейдеры/FBO/текстура 0, оставленные после HUD, дают
+     * чёрно-белую «шахматку» на весь экран.
+     */
+    public static void restoreHudGlState() {
+        if (mc == null || mc.getFramebuffer() == null) {
+            return;
+        }
+        try {
+            mc.getFramebuffer().beginWrite(true);
+            RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
+            RenderSystem.setShaderTexture(0, 0);
+            RenderSystem.setShaderTexture(1, 0);
+            RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+            RenderSystem.enableCull();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.disableBlend();
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthMask(true);
+            RenderSystem.colorMask(true, true, true, true);
+            GL30.glDisable(GL30.GL_SCISSOR_TEST);
+        } catch (Throwable ignored) {
+        }
+    }
 
     public void drawHudItem(DrawContext context, ItemStack stack, float x, float y, float scale, float z) {
         if (context == null || stack == null || stack.isEmpty()) {

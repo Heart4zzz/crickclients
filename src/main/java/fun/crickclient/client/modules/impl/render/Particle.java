@@ -334,6 +334,12 @@ public class Particle extends Module {
         synchronized (particles) {
             renderList = new ArrayList<>(particles);
         }
+        if (renderList.isEmpty()) return;
+
+        float camYaw = -mc.gameRenderer.getCamera().getYaw();
+        float camPitch = mc.gameRenderer.getCamera().getPitch();
+        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+        boolean hasGeometry = false;
 
         for (ParticleData particle : renderList) {
             particle.update(mc);
@@ -344,8 +350,8 @@ public class Particle extends Module {
 
             matrices.push();
             matrices.translate((float) x, (float) y, (float) z);
-            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-mc.gameRenderer.getCamera().getYaw()));
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(mc.gameRenderer.getCamera().getPitch()));
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(camYaw));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camPitch));
 
             Matrix4f matrix = matrices.peek().getPositionMatrix();
 
@@ -355,16 +361,17 @@ public class Particle extends Module {
             int g = (particle.color >> 8) & 0xFF;
             int b = particle.color & 0xFF;
 
-            BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
-
             buffer.vertex(matrix, -half, -half, 0).texture(0, 1).color(r, g, b, alpha);
             buffer.vertex(matrix, -half, half, 0).texture(0, 0).color(r, g, b, alpha);
             buffer.vertex(matrix, half, half, 0).texture(1, 0).color(r, g, b, alpha);
             buffer.vertex(matrix, half, -half, 0).texture(1, 1).color(r, g, b, alpha);
-
-            BufferRenderer.drawWithGlobalProgram(buffer.end());
+            hasGeometry = true;
 
             matrices.pop();
+        }
+
+        if (hasGeometry) {
+            BufferRenderer.drawWithGlobalProgram(buffer.end());
         }
 
         RenderSystem.enableCull();

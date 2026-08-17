@@ -1,17 +1,29 @@
 package fun.crickclient.api.utils.render.blur;
 
+import com.mojang.blaze3d.systems.ProjectionType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.GlUniform;
 import net.minecraft.client.gl.ShaderProgram;
+import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.gl.SimpleFramebuffer;
 import net.minecraft.client.render.*;
+import org.joml.Matrix4f;
+import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 import fun.crickclient.api.QClient;
 import fun.crickclient.api.utils.render.ShaderUtils;
 
+/**
+ * Kawase-blur для стеклянного фона HUD.
+ * <p>
+ * Считается в пониженном разрешении (1/2 или 1/4) и двумя итерациями —
+ * визуально почти как полный 4-проходный блюр, но на порядок дешевле.
+ * После каждой сборки обязательно возвращает основной FBO, шейдер и viewport,
+ * иначе ванильный рендер рисует «шахматные» квадраты на весь экран.
+ */
 public class BlurProgram implements QClient {
 
     private static BlurProgram instance;
@@ -23,13 +35,16 @@ public class BlurProgram implements QClient {
 
     private int lastWidth = -1;
     private int lastHeight = -1;
+    private int lastDivisor = -1;
     private long lastUpdateTime = 0;
-    private boolean requestedThisFrame = true;
+    private boolean requestedThisFrame = false;
+    private Framebuffer resultBuffer;
 
     @Setter
     private float blurOffset = 1.0f;
 
-    private final int iterations = 4;
+    private static final int ITERATIONS = 2;
+    private static final long MIN_UPDATE_INTERVAL_MS = 22L;
 
     public static BlurProgram getInstance() {
         if (instance == null) {
@@ -51,102 +66,158 @@ public class BlurProgram implements QClient {
         requestedThisFrame = true;
     }
 
+    /** Сбрасывает отложенный проход — нужно при выключении HUD, чтобы не гонять kawase вхолостую. */
+    public void cancel() {
+        requestedThisFrame = false;
+    }
+
+    public boolean isRequested() {
+        return requestedThisFrame;
+    }
+
     private void draw() {
         long currentTime = System.currentTimeMillis();
-        if (currentTime - lastUpdateTime < 16) {
+        if (currentTime - lastUpdateTime < MIN_UPDATE_INTERVAL_MS) {
             return;
         }
         lastUpdateTime = currentTime;
 
-        int width = mc.getWindow().getFramebufferWidth();
-        int height = mc.getWindow().getFramebufferHeight();
-
-        if (buffer1 == null || buffer2 == null || lastWidth != width || lastHeight != height) {
-            if (buffer1 != null) {
-                buffer1.delete();
-            }
-            if (buffer2 != null) {
-                buffer2.delete();
-            }
-            buffer1 = new SimpleFramebuffer(width, height, false);
-            buffer2 = new SimpleFramebuffer(width, height, false);
-
-            setLinearFiltering(buffer1);
-            setLinearFiltering(buffer2);
-
-            lastWidth = width;
-            lastHeight = height;
+        int srcWidth = mc.getWindow().getFramebufferWidth();
+        int srcHeight = mc.getWindow().getFramebufferHeight();
+        if (srcWidth <= 0 || srcHeight <= 0) {
+            return;
         }
 
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
+        int divisor = chooseDivisor(srcHeight);
+        int width = Math.max(2, srcWidth / divisor);
+        int height = Math.max(2, srcHeight / divisor);
 
-        ShaderProgram kawaseDown = mc.getShaderLoader().getOrCreateProgram(ShaderUtils.kawaseDown);
-        ShaderProgram kawaseUp = mc.getShaderLoader().getOrCreateProgram(ShaderUtils.kawaseUp);
+        Matrix4f savedProjection = new Matrix4f(RenderSystem.getProjectionMatrix());
+        int savedFbo = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
+        int[] savedViewport = new int[4];
+        GL11.glGetIntegerv(GL11.GL_VIEWPORT, savedViewport);
 
-        buffer1.setClearColor(0, 0, 0, 0);
-        buffer1.clear();
-        buffer1.beginWrite(true);
+        try {
+            if (buffer1 == null || buffer2 == null || lastWidth != width || lastHeight != height || lastDivisor != divisor) {
+                if (buffer1 != null) {
+                    buffer1.delete();
+                }
+                if (buffer2 != null) {
+                    buffer2.delete();
+                }
+                buffer1 = new SimpleFramebuffer(width, height, false);
+                buffer2 = new SimpleFramebuffer(width, height, false);
 
-        RenderSystem.setShader(ShaderUtils.kawaseDown);
-        mc.getFramebuffer().beginRead();
-        RenderSystem.setShaderTexture(0, mc.getFramebuffer().getColorAttachment());
+                setLinearFiltering(buffer1);
+                setLinearFiltering(buffer2);
 
-        setKawaseUniforms(kawaseDown, width, height);
-        drawQuad(mc.getWindow().getScaledWidth(), mc.getWindow().getScaledHeight());
+                lastWidth = width;
+                lastHeight = height;
+                lastDivisor = divisor;
+            }
 
-        mc.getFramebuffer().endRead();
-        buffer1.endWrite();
+            float scaledWidth = Math.max(1, mc.getWindow().getScaledWidth());
+            float scaledHeight = Math.max(1, mc.getWindow().getScaledHeight());
+            RenderSystem.setProjectionMatrix(
+                    new Matrix4f().setOrtho(0.0f, scaledWidth, scaledHeight, 0.0f, 1000.0f, 3000.0f),
+                    ProjectionType.ORTHOGRAPHIC
+            );
 
-        Framebuffer[] buffers = new Framebuffer[]{buffer1, buffer2};
+            RenderSystem.enableBlend();
+            RenderSystem.defaultBlendFunc();
+            RenderSystem.disableDepthTest();
+            RenderSystem.depthMask(false);
+            RenderSystem.disableCull();
 
-        for (int i = 1; i < iterations; i++) {
-            int srcIndex = (i + 1) % 2;
-            int dstIndex = i % 2;
+            ShaderProgram kawaseDown = mc.getShaderLoader().getOrCreateProgram(ShaderUtils.kawaseDown);
+            ShaderProgram kawaseUp = mc.getShaderLoader().getOrCreateProgram(ShaderUtils.kawaseUp);
+            if (kawaseDown == null || kawaseUp == null) {
+                return;
+            }
 
-            Framebuffer src = buffers[srcIndex];
-            Framebuffer dst = buffers[dstIndex];
-
-            dst.setClearColor(0, 0, 0, 0);
-            dst.clear();
-            dst.beginWrite(true);
+            buffer1.setClearColor(0, 0, 0, 0);
+            buffer1.clear();
+            buffer1.beginWrite(true);
 
             RenderSystem.setShader(ShaderUtils.kawaseDown);
-            src.beginRead();
-            RenderSystem.setShaderTexture(0, src.getColorAttachment());
+            RenderSystem.setShaderTexture(0, mc.getFramebuffer().getColorAttachment());
+            setKawaseUniforms(kawaseDown, srcWidth, srcHeight);
+            drawQuad(scaledWidth, scaledHeight);
+            buffer1.endWrite();
 
-            setKawaseUniforms(kawaseDown, src.textureWidth, src.textureHeight);
-            drawQuad(mc.getWindow().getScaledWidth(), mc.getWindow().getScaledHeight());
+            Framebuffer[] buffers = new Framebuffer[]{buffer1, buffer2};
 
-            src.endRead();
-            dst.endWrite();
+            for (int i = 1; i < ITERATIONS; i++) {
+                int srcIndex = (i + 1) % 2;
+                int dstIndex = i % 2;
+
+                Framebuffer src = buffers[srcIndex];
+                Framebuffer dst = buffers[dstIndex];
+
+                dst.setClearColor(0, 0, 0, 0);
+                dst.clear();
+                dst.beginWrite(true);
+
+                RenderSystem.setShader(ShaderUtils.kawaseDown);
+                RenderSystem.setShaderTexture(0, src.getColorAttachment());
+                setKawaseUniforms(kawaseDown, src.textureWidth, src.textureHeight);
+                drawQuad(scaledWidth, scaledHeight);
+                dst.endWrite();
+            }
+
+            Framebuffer lastWritten = ITERATIONS <= 1 ? buffer1 : buffers[(ITERATIONS - 1) % 2];
+            for (int i = 0; i < ITERATIONS; i++) {
+                Framebuffer src = lastWritten;
+                Framebuffer dst = src == buffer1 ? buffer2 : buffer1;
+
+                dst.setClearColor(0, 0, 0, 0);
+                dst.clear();
+                dst.beginWrite(true);
+
+                RenderSystem.setShader(ShaderUtils.kawaseUp);
+                RenderSystem.setShaderTexture(0, src.getColorAttachment());
+                setKawaseUniforms(kawaseUp, src.textureWidth, src.textureHeight);
+                drawQuad(scaledWidth, scaledHeight);
+                dst.endWrite();
+                lastWritten = dst;
+            }
+            resultBuffer = lastWritten;
+        } catch (Throwable ignored) {
+        } finally {
+            restoreAfterPass(savedProjection, savedFbo, savedViewport);
         }
+    }
 
-        for (int i = 0; i < iterations; i++) {
-            int srcIndex = i % 2;
-            int dstIndex = (i + 1) % 2;
-
-            Framebuffer src = buffers[srcIndex];
-            Framebuffer dst = buffers[dstIndex];
-
-            dst.setClearColor(0, 0, 0, 0);
-            dst.clear();
-            dst.beginWrite(true);
-
-            RenderSystem.setShader(ShaderUtils.kawaseUp);
-            src.beginRead();
-            RenderSystem.setShaderTexture(0, src.getColorAttachment());
-
-            setKawaseUniforms(kawaseUp, src.textureWidth, src.textureHeight);
-            drawQuad(mc.getWindow().getScaledWidth(), mc.getWindow().getScaledHeight());
-
-            src.endRead();
-            dst.endWrite();
+    private static int chooseDivisor(int framebufferHeight) {
+        if (framebufferHeight >= 2160) {
+            return 4;
         }
+        if (framebufferHeight >= 1440) {
+            return 3;
+        }
+        return 2;
+    }
 
-        RenderSystem.disableBlend();
-        mc.getFramebuffer().beginWrite(true);
+    private void restoreAfterPass(Matrix4f savedProjection, int savedFbo, int[] savedViewport) {
+        try {
+            mc.getFramebuffer().beginWrite(true);
+        } catch (Throwable ignored) {
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, savedFbo);
+            if (savedViewport[2] > 0 && savedViewport[3] > 0) {
+                GL11.glViewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
+            }
+        }
+        RenderSystem.setProjectionMatrix(savedProjection, ProjectionType.ORTHOGRAPHIC);
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
         RenderSystem.setShaderTexture(0, 0);
+        RenderSystem.setShaderTexture(1, 0);
+        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
+        RenderSystem.enableCull();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthMask(true);
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableBlend();
+        RenderSystem.colorMask(true, true, true, true);
     }
 
     private void setLinearFiltering(Framebuffer framebuffer) {
@@ -163,7 +234,7 @@ public class BlurProgram implements QClient {
         GlUniform tintIntensityUniform = shader.getUniform("TintIntensity");
         GlUniform tintColorUniform = shader.getUniform("TintColor");
 
-        if (resolutionUniform != null) resolutionUniform.set(1.0f / texWidth, 1.0f / texHeight);
+        if (resolutionUniform != null) resolutionUniform.set(1.0f / Math.max(1, texWidth), 1.0f / Math.max(1, texHeight));
         if (offsetUniform != null) offsetUniform.set(blurOffset);
         if (saturationUniform != null) saturationUniform.set(1.0f);
         if (tintIntensityUniform != null) tintIntensityUniform.set(0.0f);
@@ -181,6 +252,7 @@ public class BlurProgram implements QClient {
 
     public static int getTexture() {
         getInstance().request();
-        return buffer1 != null ? buffer1.getColorAttachment() : 0;
+        Framebuffer result = getInstance().resultBuffer != null ? getInstance().resultBuffer : buffer1;
+        return result != null ? result.getColorAttachment() : 0;
     }
 }

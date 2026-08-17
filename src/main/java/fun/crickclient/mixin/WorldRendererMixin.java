@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import fun.crickclient.api.QClient;
+import fun.crickclient.api.utils.render.RenderUtils;
 import fun.crickclient.api.events.EventInvoker;
 import fun.crickclient.api.events.implement.Event3DRender;
 import fun.crickclient.api.storages.implement.helpertstorages.enumvar.ModuleClass;
@@ -90,11 +91,15 @@ public class WorldRendererMixin implements QClient {
         Profilers.get().swap("crickclient_renderWorld");
         MatrixStack matrices = new MatrixStack();
         matrices.multiplyPositionMatrix(positionMatrix);
-        if (has3DListeners) {
-            new Event3DRender(matrices, positionMatrix, projectionMatrix, camera, tickCounter.getTickDelta(false)).call();
-        }
-        if (renderSonar) {
-            sonar.renderFromMixin(positionMatrix, projectionMatrix, camera.getPos());
+        try {
+            if (has3DListeners) {
+                new Event3DRender(matrices, positionMatrix, projectionMatrix, camera, tickCounter.getTickDelta(false)).call();
+            }
+            if (renderSonar) {
+                sonar.renderFromMixin(positionMatrix, projectionMatrix, camera.getPos());
+            }
+        } finally {
+            RenderUtils.restoreHudGlState();
         }
     }
 

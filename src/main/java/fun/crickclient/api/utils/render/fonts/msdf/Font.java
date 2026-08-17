@@ -98,10 +98,6 @@ public class Font implements QClient {
 
         RenderSystem.setShader(ShaderUtils.fontsMsdf);
         BufferRenderer.drawWithGlobalProgram(buffer.end());
-
-        RenderSystem.setShaderTexture(0, 0);
-        RenderSystem.enableCull();
-        RenderSystem.disableBlend();
     }
 
     public void drawGradientStringHorizontal(String text, float x, float y, int leftColor, int rightColor) {
@@ -467,9 +463,16 @@ public class Font implements QClient {
         return wrapped > 1.0f ? 2.0f - wrapped : wrapped;
     }
 
+    private String cachedWidthText;
+    private float cachedWidthValue;
+
     public float getStringWidth(String text) {
         if (text == null) return 0;
-        return font.getWidth(stripFormattingCodes(text), size) / 2f;
+        if (text.equals(cachedWidthText)) return cachedWidthValue;
+        float width = font.getWidth(stripFormattingCodes(text), size) / 2f;
+        cachedWidthText = text;
+        cachedWidthValue = width;
+        return width;
     }
 
     public float getWidth(String text) {
