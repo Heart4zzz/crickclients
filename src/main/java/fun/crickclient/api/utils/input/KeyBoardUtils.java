@@ -7,6 +7,8 @@ import fun.crickclient.api.QClient;
 import fun.crickclient.api.events.implement.EventBinding;
 import fun.crickclient.api.storages.implement.helpertstorages.enumvar.ModuleClass;
 import fun.crickclient.api.utils.client.ClientSoundPlayer;
+import fun.crickclient.client.modules.impl.misc.ClientSounds;
+import fun.crickclient.client.modules.settings.implement.BindSetting;
 import fun.crickclient.client.ui.MenuPanel;
 import fun.crickclient.client.ui.autobuy.AutoBuy;
 
@@ -30,12 +32,18 @@ public class KeyBoardUtils implements QClient {
 
             new EventBinding(key, EventBinding.BindType.KEYBOARD).call();
 
+            boolean toggled = false;
             var modules = ModuleClass.INSTANCE.getObject();
             for (int i = 0, size = modules.size(); i < size; i++) {
                 var module = modules.get(i);
                 if (module.getKey() == key) {
                     module.toggle();
+                    toggled = true;
                 }
+            }
+
+            if (!toggled && isFunctionBind(key)) {
+                ClientSounds.playBindSound();
             }
         }
     }
@@ -70,14 +78,45 @@ public class KeyBoardUtils implements QClient {
 
             new EventBinding(mouseKey, EventBinding.BindType.MOUSE).call();
 
+            boolean toggled = false;
             var modules = ModuleClass.INSTANCE.getObject();
             for (int i = 0, size = modules.size(); i < size; i++) {
                 var module = modules.get(i);
                 if (module.getKey() == mouseKey) {
                     module.toggle();
+                    toggled = true;
+                }
+            }
+
+            if (!toggled && isFunctionBind(mouseKey)) {
+                ClientSounds.playBindSound();
+            }
+        }
+    }
+
+    /**
+     * Проверяет, привязана ли клавиша к какой-либо функции включённого модуля
+     * (настройки типа {@link BindSetting}). Нужно для звуков клиента: обычный
+     * тогл модуля озвучивается через уведомления, а такие функции — нет.
+     */
+    private boolean isFunctionBind(int key) {
+        if (key <= -1) return false;
+
+        var modules = ModuleClass.INSTANCE.getObject();
+        for (int i = 0, size = modules.size(); i < size; i++) {
+            var module = modules.get(i);
+            if (!module.isEnable()) continue;
+
+            var settings = module.getSettings();
+            if (settings == null) continue;
+
+            for (int j = 0, count = settings.size(); j < count; j++) {
+                if (settings.get(j) instanceof BindSetting bindSetting && bindSetting.getKey() == key) {
+                    return true;
                 }
             }
         }
+        return false;
     }
 
     public boolean isBindHeld(int key) {
