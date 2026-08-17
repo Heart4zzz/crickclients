@@ -150,8 +150,6 @@ public class ConfigPanel implements QClient {
                 ColorProvider.setAlpha(bottom, a), ColorProvider.setAlpha(bottom, a));
         DrawUtil.drawRoundOutline(cx, cy, cardW, cardH, ClickGuiStyles.MODULE_RADIUS, 1f,
                 ColorProvider.rgba(255, 255, 255, (int) ((12 + 12 * (hover ? 1 : 0)) * alpha)));
-        DrawUtil.drawRound(cx + 5f, cy + 0.7f, cardW - 10f, 0.7f, 0.35f,
-                ColorProvider.rgba(255, 255, 255, (int) (20 * alpha)));
 
         DrawUtil.drawText(GuiFonts.GUI_TITLE.get(), name, cx + 9f, cy + 6f,
                 ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha)), 6.8f,
