@@ -1,18 +1,18 @@
-package zov.crickclient.ui;
+package fun.crickclient.client.ui.clickgui;
 
+import fun.crickclient.api.QClient;
+import fun.crickclient.api.storages.implement.helpertstorages.enumvar.ModuleClass;
+import fun.crickclient.client.modules.Module;
+import fun.crickclient.client.ui.clickgui.component.Component;
+import fun.crickclient.client.ui.clickgui.util.Animation;
+import fun.crickclient.client.ui.clickgui.util.DrawUtil;
+import fun.crickclient.client.ui.clickgui.util.Easing;
+import fun.crickclient.client.ui.clickgui.util.HoverUtil;
+import fun.crickclient.client.ui.clickgui.util.Scissor;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.math.MathHelper;
-import zov.crickclient.CrickClient;
-import zov.crickclient.module.ModuleCategory;
-import zov.crickclient.module.settings.ItemModelSetting;
-import zov.crickclient.ui.component.Component;
-import zov.crickclient.util.IMinecraft;
-import zov.crickclient.util.render.helper.HoverUtil;
-import zov.crickclient.util.render.math.Animation;
-import zov.crickclient.util.render.math.Easing;
-import zov.crickclient.util.render.math.Scissor;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -20,8 +20,11 @@ import java.util.List;
 
 @Getter
 @Setter
-public class Panel implements IMinecraft {
-    public final ModuleCategory category;
+public class Panel implements QClient {
+    /** Модули, которых не должно быть в списке клик гуи (у них свои экраны). */
+    private static final List<String> HIDDEN_MODULES = List.of("AutoBuy", "AutoForest");
+
+    public final Module.ModuleCategory category;
     public List<ModuleComponent> moduleComponents = new ArrayList<>();
 
     private float contentX, contentY, contentW, contentH;
@@ -36,6 +39,16 @@ public class Panel implements IMinecraft {
 
     private final ClickGuiFrame parent;
 
+    public Panel(Module.ModuleCategory category, ClickGuiFrame parent) {
+        this.category = category;
+        this.parent = parent;
+        ModuleClass.INSTANCE.getObject().stream()
+                .filter(m -> m.getCategory() == this.category)
+                .filter(m -> !HIDDEN_MODULES.contains(m.getName()))
+                .sorted(Comparator.comparing(m -> m.getName().toLowerCase()))
+                .forEach(m -> moduleComponents.add(new ModuleComponent(m, this)));
+    }
+
     public Animation getScrollAnim() {
         return scrollAnim;
     }
@@ -47,15 +60,6 @@ public class Panel implements IMinecraft {
     public void setMaxScroll(float maxScroll) {
         this.maxScroll = maxScroll;
         clampScroll();
-    }
-
-    public Panel(ModuleCategory category, ClickGuiFrame parent) {
-        this.category = category;
-        this.parent = parent;
-        CrickClient.getInstance().getModuleStorage().getModules().stream()
-                .filter(m -> m.getCategory() == this.category)
-                .sorted(Comparator.comparing(m -> m.getName().toLowerCase()))
-                .forEach(m -> moduleComponents.add(new ModuleComponent(m, this)));
     }
 
     public void setContentBounds(float x, float y, float w, float h) {
@@ -87,7 +91,7 @@ public class Panel implements IMinecraft {
     }
 
     public float computeComponentHeight(ModuleComponent component) {
-        float headerH = ClickGuiStyles.moduleHeaderHeight(component.getModule().getDesc());
+        float headerH = ClickGuiStyles.moduleHeaderHeight(component.description());
         float extraHeight = 0;
         if (component.getAnimation().getValue() > 0.01f) {
             extraHeight = 5f;
@@ -99,7 +103,7 @@ public class Panel implements IMinecraft {
             }
             extraHeight += 6f;
         }
-        return headerH + extraHeight * (float) component.getAnimation().getValue();
+        return headerH + extraHeight * component.getAnimation().getValue();
     }
 
     public void layoutGrid(List<ModuleComponent> components) {
@@ -111,7 +115,7 @@ public class Panel implements IMinecraft {
         int col = 0;
 
         for (ModuleComponent component : components) {
-            if (parent.searchCheck(component.getModule().getName())) continue;
+            if (parent.searchCheck(component.getModule().getDisplayName())) continue;
 
             float cardX = contentX + col * (cardW + colGap);
             float cardH = computeComponentHeight(component);
@@ -141,9 +145,9 @@ public class Panel implements IMinecraft {
         Scissor.setFromComponentCoordinates(contentX, contentY, contentW, contentH);
 
         for (ModuleComponent component : moduleComponents) {
-            if (parent.searchCheck(component.getModule().getName())) continue;
+            if (parent.searchCheck(component.getModule().getDisplayName())) continue;
             Scissor.setFromComponentCoordinates(contentX, contentY, contentW, contentH);
-            component.render(context, mouseX, mouseY, partialTicks);
+            component.render(DrawUtil.matrices(), mouseX, mouseY, partialTicks);
         }
 
         scrollbarAnim.run(maxScroll > 0f);
@@ -171,9 +175,9 @@ public class Panel implements IMinecraft {
         Scissor.push();
         Scissor.setFromComponentCoordinates(contentX, contentY, contentW, contentH);
         for (ModuleComponent component : components) {
-            if (parent.searchCheck(component.getModule().getName())) continue;
+            if (parent.searchCheck(component.getModule().getDisplayName())) continue;
             Scissor.setFromComponentCoordinates(contentX, contentY, contentW, contentH);
-            component.render(context, mouseX, mouseY, partialTicks);
+            component.render(DrawUtil.matrices(), mouseX, mouseY, partialTicks);
         }
         Scissor.unset();
         Scissor.pop();
@@ -182,7 +186,7 @@ public class Panel implements IMinecraft {
     public void mouseClicked(double mouseX, double mouseY, int button) {
         if (HoverUtil.isHovered(mouseX, mouseY, contentX, contentY, contentW, contentH)) {
             for (ModuleComponent moduleComponent : moduleComponents) {
-                if (!parent.searchCheck(moduleComponent.getModule().getName())) {
+                if (!parent.searchCheck(moduleComponent.getModule().getDisplayName())) {
                     moduleComponent.mouseClicked(mouseX, mouseY, button);
                 }
             }
@@ -191,9 +195,7 @@ public class Panel implements IMinecraft {
 
     public void mouseReleased(double mouseX, double mouseY, int button) {
         for (ModuleComponent moduleComponent : moduleComponents) {
-            if (!parent.searchCheck(moduleComponent.getModule().getName())) {
-                moduleComponent.mouseReleased(mouseX, mouseY, button);
-            }
+            moduleComponent.mouseReleased(mouseX, mouseY, button);
         }
     }
 
@@ -210,7 +212,9 @@ public class Panel implements IMinecraft {
         }
     }
 
-    public void openItemModelGallery(ItemModelSetting setting) {
-        parent.openItemModelGallery(setting);
+    public void charTyped(char chr, int modifiers) {
+        for (ModuleComponent moduleComponent : moduleComponents) {
+            moduleComponent.charTyped(chr, modifiers);
+        }
     }
 }

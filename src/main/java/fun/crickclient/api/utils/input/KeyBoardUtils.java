@@ -6,10 +6,8 @@ import fun.crickclient.CrickClient;
 import fun.crickclient.api.QClient;
 import fun.crickclient.api.events.implement.EventBinding;
 import fun.crickclient.api.storages.implement.helpertstorages.enumvar.ModuleClass;
-import fun.crickclient.api.utils.client.ClientSoundPlayer;
 import fun.crickclient.client.modules.impl.misc.ClientSounds;
 import fun.crickclient.client.modules.settings.implement.BindSetting;
-import fun.crickclient.client.ui.MenuPanel;
 import fun.crickclient.client.ui.autobuy.AutoBuy;
 
 @UtilityClass
@@ -22,10 +20,6 @@ public class KeyBoardUtils implements QClient {
             return;
         }
         if (action == 1) {
-            if (key == GLFW.GLFW_KEY_RIGHT_SHIFT) {
-                ClientSoundPlayer.playSound("opengui.wav", 0.6, 1.0f);
-                mc.setScreen(new MenuPanel());
-            }
             if (key == ModuleClass.INSTANCE.autoBuy.openKey.getKey()) {
                 mc.setScreen(new AutoBuy());
             }

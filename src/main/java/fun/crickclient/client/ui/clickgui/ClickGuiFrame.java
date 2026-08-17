@@ -1,6 +1,11 @@
-package zov.crickclient.ui;
+package fun.crickclient.client.ui.clickgui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import fun.crickclient.api.QClient;
+import fun.crickclient.client.modules.impl.render.ClickGui;
+import fun.crickclient.client.ui.clickgui.component.SearchField;
+import fun.crickclient.client.ui.clickgui.util.CursorManager;
+import fun.crickclient.client.ui.clickgui.util.Scissor;
 import lombok.Getter;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -8,22 +13,13 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.joml.Matrix4fStack;
 import org.lwjgl.glfw.GLFW;
-import zov.crickclient.module.list.render.ClickGui;
-import zov.crickclient.module.settings.ItemModelSetting;
-import zov.crickclient.ui.component.ItemModelGalleryPopup;
-import zov.crickclient.ui.component.SearchField;
-import zov.crickclient.util.IMinecraft;
-import zov.crickclient.util.base.Instance;
-import zov.crickclient.util.cursor.CursorManager;
-import zov.crickclient.util.render.math.Scissor;
 
 @Getter
-public class ClickGuiFrame extends Screen implements IMinecraft {
+public class ClickGuiFrame extends Screen implements QClient {
 
     private final ClickGuiShell shell;
     private final SearchField searchField;
     private final ThemeEditor themeEditor = new ThemeEditor();
-    private ItemModelGalleryPopup itemModelGallery;
 
     private boolean closing;
 
@@ -42,10 +38,13 @@ public class ClickGuiFrame extends Screen implements IMinecraft {
 
     public void playOpenAnimation() {
         closing = false;
-        itemModelGallery = null;
         shell.resetOpenAnimation();
         themeEditor.resetAppear();
         searchField.resetAppear();
+    }
+
+    @Override
+    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
     }
 
     @Override
@@ -75,7 +74,7 @@ public class ClickGuiFrame extends Screen implements IMinecraft {
         float shiftY = themeEditor.getShellShiftY();
         shell.layout(windowWidth, windowHeight, shiftX, shiftY);
         shell.getOpenAnim().run(!closing);
-        float open = MathHelper.clamp((float) shell.getOpenAnim().getValue(), 0f, 1f);
+        float open = MathHelper.clamp(shell.getOpenAnim().getValue(), 0f, 1f);
         ClickGuiStyles.drawBackdrop(windowWidth, windowHeight, Math.max(open, 0.35f));
         shell.render(context, mouseX, mouseY, delta, open);
 
@@ -88,10 +87,6 @@ public class ClickGuiFrame extends Screen implements IMinecraft {
             Scissor.resetGuiTransform();
             close();
             return;
-        }
-
-        if (itemModelGallery != null) {
-            itemModelGallery.render(context, mouseX, mouseY, delta);
         }
 
         modelView.popMatrix();
@@ -116,13 +111,9 @@ public class ClickGuiFrame extends Screen implements IMinecraft {
         return !text.replaceAll(" ", "").toLowerCase().contains(cachedNormalizedQuery);
     }
 
-    public void openItemModelGallery(ItemModelSetting setting) {
-        itemModelGallery = new ItemModelGalleryPopup(setting);
-    }
-
     private float guiScale() {
-        ClickGui module = (ClickGui) Instance.get(ClickGui.class);
-        float userScale = module != null ? module.size.getFloatValue() : 0.78f;
+        ClickGui module = ClickGui.INSTANCE;
+        float userScale = module != null ? module.size.get() : 0.8f;
 
         int screenW = mc.getWindow().getScaledWidth();
         int screenH = mc.getWindow().getScaledHeight();
@@ -137,7 +128,7 @@ public class ClickGuiFrame extends Screen implements IMinecraft {
         float heightLimit = (screenH - 32f) / totalH;
         float autoLimit = Math.min(widthLimit, heightLimit);
 
-        return Math.min(Math.min(userScale, autoLimit), 1.1f);
+        return Math.min(Math.min(userScale, autoLimit), 1.4f);
     }
 
     private double scaleMouseX(double mouseX) {
@@ -157,14 +148,6 @@ public class ClickGuiFrame extends Screen implements IMinecraft {
         mouseX = scaleMouseX(mouseX);
         mouseY = scaleMouseY(mouseY);
 
-        if (itemModelGallery != null) {
-            if (!itemModelGallery.contains(mouseX, mouseY)) {
-                itemModelGallery = null;
-            } else {
-                itemModelGallery.mouseClicked(mouseX, mouseY, button);
-            }
-            return true;
-        }
         if (themeEditor.mouseClicked(mouseX, mouseY, button)) return true;
         if (shell.mouseClicked(mouseX, mouseY, button)) return true;
         return super.mouseClicked(mouseX, mouseY, button);
@@ -174,10 +157,6 @@ public class ClickGuiFrame extends Screen implements IMinecraft {
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         mouseX = scaleMouseX(mouseX);
         mouseY = scaleMouseY(mouseY);
-        if (itemModelGallery != null) {
-            itemModelGallery.mouseReleased(mouseX, mouseY, button);
-            return true;
-        }
         themeEditor.mouseReleased(mouseX, mouseY, button);
         shell.mouseReleased(mouseX, mouseY, button);
         return super.mouseReleased(mouseX, mouseY, button);
@@ -187,28 +166,18 @@ public class ClickGuiFrame extends Screen implements IMinecraft {
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
         mouseX = scaleMouseX(mouseX);
         mouseY = scaleMouseY(mouseY);
-        if (itemModelGallery != null) {
-            itemModelGallery.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
-            return true;
-        }
         shell.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (itemModelGallery != null) {
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) itemModelGallery = null;
-            else itemModelGallery.keyPressed(keyCode, scanCode, modifiers);
-            return true;
-        }
-
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && shell.isBindingAnyModule()) {
             shell.keyPressed(keyCode, scanCode, modifiers);
             return true;
         }
 
-        if (shell.isConfigFieldFocused()) {
+        if (shell.isConfigFieldFocused() || shell.isModuleTextFocused()) {
             shell.keyPressed(keyCode, scanCode, modifiers);
             return true;
         }
@@ -231,11 +200,7 @@ public class ClickGuiFrame extends Screen implements IMinecraft {
 
     @Override
     public boolean charTyped(char chr, int modifiers) {
-        if (itemModelGallery != null) {
-            itemModelGallery.charTyped(chr, modifiers);
-            return true;
-        }
-        if (shell.isConfigFieldFocused()) {
+        if (shell.isConfigFieldFocused() || shell.isModuleTextFocused()) {
             shell.charTyped(chr, modifiers);
             return true;
         }

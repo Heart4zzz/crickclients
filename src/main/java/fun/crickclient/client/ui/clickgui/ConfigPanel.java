@@ -1,25 +1,26 @@
-package zov.crickclient.ui;
+package fun.crickclient.client.ui.clickgui;
 
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.math.MathHelper;
-import zov.crickclient.ui.component.SearchField;
-import zov.crickclient.util.IMinecraft;
-import zov.crickclient.util.config.ConfigManager;
-import zov.crickclient.util.cursor.CursorManager;
-import zov.crickclient.util.render.helper.HoverUtil;
-import zov.crickclient.util.render.math.Animation;
-import zov.crickclient.util.render.math.Easing;
-import zov.crickclient.util.render.math.Scissor;
-import zov.crickclient.util.render.msdf.Fonts;
-import zov.crickclient.util.render.providers.ColorProvider;
-import zov.crickclient.util.render.renderers.DrawUtil;
+import fun.crickclient.client.ui.clickgui.component.SearchField;
+import fun.crickclient.client.ui.clickgui.ClickGuiStyles;
+import fun.crickclient.api.QClient;
+import fun.crickclient.client.ui.clickgui.util.ConfigManager;
+import fun.crickclient.client.ui.clickgui.util.CursorManager;
+import fun.crickclient.client.ui.clickgui.util.HoverUtil;
+import fun.crickclient.client.ui.clickgui.util.Animation;
+import fun.crickclient.client.ui.clickgui.util.Easing;
+import fun.crickclient.client.ui.clickgui.util.Scissor;
+import fun.crickclient.client.ui.clickgui.util.GuiFonts;
+import fun.crickclient.client.ui.clickgui.util.ColorProvider;
+import fun.crickclient.client.ui.clickgui.util.DrawUtil;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 
-public class ConfigPanel implements IMinecraft {
+public class ConfigPanel implements QClient {
     private final SearchField nameField = new SearchField("New config name...");
     private final SearchField searchField = new SearchField("Search configs...");
     private final Animation scrollAnim = new Animation(Easing.QUINTIC_OUT, 300);
@@ -102,8 +103,8 @@ public class ConfigPanel implements IMinecraft {
             String message = configs.isEmpty()
                     ? "Create your first config above"
                     : "No configs match your search";
-            float msgW = Fonts.GUI_BODY.get().getWidth(message, 6.5f);
-            DrawUtil.drawText(Fonts.GUI_BODY.get(), message, x + (w - msgW) / 2f, listY + listH / 2f - 8f,
+            float msgW = GuiFonts.GUI_BODY.get().getWidth(message, 6.5f);
+            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), message, x + (w - msgW) / 2f, listY + listH / 2f - 8f,
                     ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (170 * alpha)), 6.5f);
             maxScroll = 0f;
             return;
@@ -144,9 +145,9 @@ public class ConfigPanel implements IMinecraft {
 
         DrawUtil.drawRound(cx, cy, cardW, cardH, 6f, bg);
 
-        DrawUtil.drawText(Fonts.GUI_TITLE.get(), name, cx + 8f, cy + 6f,
+        DrawUtil.drawText(GuiFonts.GUI_TITLE.get(), name, cx + 8f, cy + 6f,
                 ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha)), 6.8f);
-        DrawUtil.drawText(Fonts.GUI_BODY.get(), "Click Load to apply", cx + 8f, cy + 15f,
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), "Click Load to apply", cx + 8f, cy + 15f,
                 ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (150 * alpha)), 5.2f);
 
         float loadW = 36f;

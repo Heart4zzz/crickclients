@@ -1,4 +1,4 @@
-package zov.crickclient.util.render.math;
+package fun.crickclient.client.ui.clickgui.util;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -66,13 +66,13 @@ public interface Easing {
         return c / 2 * ((t -= 2) * t * t * t * t + 2) + b;
     };
     
-    Easing SINE_IN = (t, b, c, d) -> - c * (float) MathUtil.cos(t / d * (Math.PI / 2)) + c + b;
+    Easing SINE_IN = (t, b, c, d) -> - c * (float) Math.cos(t / d * (Math.PI / 2)) + c + b;
 
     
     
-    Easing SINE_OUT = (t, b, c, d) -> c * (float) MathUtil.sin(t / d * (Math.PI / 2)) + b;
+    Easing SINE_OUT = (t, b, c, d) -> c * (float) Math.sin(t / d * (Math.PI / 2)) + b;
     
-    Easing SINE_IN_OUT = (t, b, c, d) -> - c / 2 * ((float) MathUtil.cos(Math.PI * t / d) - 1) + b;
+    Easing SINE_IN_OUT = (t, b, c, d) -> - c / 2 * ((float) Math.cos(Math.PI * t / d) - 1) + b;
     
     Easing EXPO_IN = (t, b, c, d) -> (t == 0) ? b : c * (float) Math.pow(2, 10 * (t / d - 1)) + b;
 
@@ -178,7 +178,7 @@ public interface Easing {
                 a = c;
                 s = p / 4;
             } else s = p / (float) (2 * Math.PI) * (float) Math.asin(c / a);
-            return - (a * (float) Math.pow(2, 10 * (t -= 1)) * (float) MathUtil.sin((t * d - s) * (2 * Math.PI) / p)) + b;
+            return - (a * (float) Math.pow(2, 10 * (t -= 1)) * (float) Math.sin((t * d - s) * (2 * Math.PI) / p)) + b;
         }
     }
 
@@ -203,7 +203,7 @@ public interface Easing {
                 a = c;
                 s = p / 4;
             } else s = p / (float) (2 * Math.PI) * (float) Math.asin(c / a);
-            return a * (float) Math.pow(2, - 10 * t) * (float) MathUtil.sin((t * d - s) * (2 * Math.PI) / p) + c + b;
+            return a * (float) Math.pow(2, - 10 * t) * (float) Math.sin((t * d - s) * (2 * Math.PI) / p) + c + b;
         }
     }
 
@@ -229,8 +229,8 @@ public interface Easing {
                 s = p / 4f;
             } else s = p / (float) (2 * Math.PI) * (float) Math.asin(c / a);
             if (t < 1)
-                return - .5f * (a * (float) Math.pow(2, 10 * (t -= 1)) * (float) MathUtil.sin((t * d - s) * (2 * Math.PI) / p)) + b;
-            return a * (float) Math.pow(2, - 10 * (t -= 1)) * (float) MathUtil.sin((t * d - s) * (2 * Math.PI) / p) * .5f + c + b;
+                return - .5f * (a * (float) Math.pow(2, 10 * (t -= 1)) * (float) Math.sin((t * d - s) * (2 * Math.PI) / p)) + b;
+            return a * (float) Math.pow(2, - 10 * (t -= 1)) * (float) Math.sin((t * d - s) * (2 * Math.PI) / p) * .5f + c + b;
         }
     }
 

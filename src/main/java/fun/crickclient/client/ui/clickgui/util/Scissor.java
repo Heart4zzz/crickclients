@@ -1,4 +1,4 @@
-package zov.crickclient.util.render.math;
+package fun.crickclient.client.ui.clickgui.util;
 
 import com.google.common.collect.Lists;
 import com.mojang.blaze3d.systems.RenderSystem;

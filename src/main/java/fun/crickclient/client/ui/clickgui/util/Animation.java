@@ -1,4 +1,4 @@
-package zov.crickclient.util.render.math;
+package fun.crickclient.client.ui.clickgui.util;
 
 import lombok.Data;
 

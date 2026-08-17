@@ -37,6 +37,7 @@ public class ModuleClass extends GlobalObject<Module> implements ModuleRewords {
                 blockesp,
                 blockOverlay,
                 chestStealer,
+                clickGui,
                 clientSounds,
                 clickPearl,
                 cosmetics,

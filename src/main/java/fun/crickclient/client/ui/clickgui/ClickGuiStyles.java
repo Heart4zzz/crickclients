@@ -1,10 +1,10 @@
-package zov.crickclient.ui;
+package fun.crickclient.client.ui.clickgui;
 
 import org.joml.Vector4f;
-import zov.crickclient.util.render.msdf.Fonts;
-import zov.crickclient.util.render.msdf.MsdfFont;
-import zov.crickclient.util.render.providers.ColorProvider;
-import zov.crickclient.util.render.renderers.DrawUtil;
+import fun.crickclient.client.ui.clickgui.util.GuiFonts;
+import fun.crickclient.api.utils.render.fonts.msdf.MsdfFont;
+import fun.crickclient.client.ui.clickgui.util.ColorProvider;
+import fun.crickclient.client.ui.clickgui.util.DrawUtil;
 
 public final class ClickGuiStyles {
     public static final float SHELL_WIDTH = 520f;
@@ -53,7 +53,7 @@ public final class ClickGuiStyles {
     }
 
     public static void drawCenteredGuiTitle(String text, float boxX, float boxY, float boxW, float boxH, float alpha, float size) {
-        MsdfFont font = Fonts.GUI_TITLE.get();
+        MsdfFont font = GuiFonts.GUI_TITLE.get();
         float tw = font.getWidth(text, size);
         float ty = boxY + (boxH - size) / 2f - 1f;
         DrawUtil.drawText(font, text, boxX + (boxW - tw) / 2f, ty,
@@ -62,7 +62,7 @@ public final class ClickGuiStyles {
 
     public static void drawCenteredButtonText(String text, float boxX, float boxY, float boxW, float boxH,
                                               float alpha, float size, int color) {
-        MsdfFont font = Fonts.GUI_BODY.get();
+        MsdfFont font = GuiFonts.GUI_BODY.get();
         float tw = font.getWidth(text, size);
         float ty = boxY + (boxH - size) / 2f - 2f;
         DrawUtil.drawText(font, text, boxX + (boxW - tw) / 2f, ty,
@@ -126,23 +126,23 @@ public final class ClickGuiStyles {
                 ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (255 * alpha)),
                 ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha)),
                 enabled);
-        DrawUtil.drawText(Fonts.GUI_TITLE.get(), name, x, y, text, 7.2f, 0.4f, 1f, maxW);
+        DrawUtil.drawText(GuiFonts.GUI_TITLE.get(), name, x, y, text, 7.2f, 0.4f, 1f, maxW);
     }
 
     public static void drawModuleDesc(String desc, float x, float y, float maxW, float alpha) {
         if (desc == null || desc.isEmpty()) return;
-        DrawUtil.drawText(Fonts.GUI_BODY.get(), desc, x, y,
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), desc, x, y,
                 ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (175 * alpha)),
                 5.8f);
     }
 
     public static void drawGuiTitle(String text, float x, float y, float alpha, float size) {
-        DrawUtil.drawText(Fonts.GUI_TITLE.get(), text, x, y,
+        DrawUtil.drawText(GuiFonts.GUI_TITLE.get(), text, x, y,
                 ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha)), size);
     }
 
     public static void drawGuiBody(String text, float x, float y, float alpha, float size) {
-        DrawUtil.drawText(Fonts.GUI_BODY.get(), text, x, y,
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), text, x, y,
                 ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (220 * alpha)), size);
     }
 

@@ -1,4 +1,4 @@
-package zov.crickclient.util.render.helper;
+package fun.crickclient.client.ui.clickgui.util;
 
 public class HoverUtil {
     public static boolean isHovered(double mouseX, double mouseY, double x, double y, double width, double height) {

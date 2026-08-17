@@ -1,4 +1,4 @@
-package zov.crickclient.util.cursor;
+package fun.crickclient.client.ui.clickgui.util;
 
 public class CursorManager {
     private static boolean hand = false;

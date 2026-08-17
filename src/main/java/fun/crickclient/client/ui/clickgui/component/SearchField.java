@@ -1,16 +1,16 @@
-package zov.crickclient.ui.component;
+package fun.crickclient.client.ui.clickgui.component;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import org.lwjgl.glfw.GLFW;
-import zov.crickclient.util.cursor.CursorManager;
-import zov.crickclient.util.render.helper.HoverUtil;
-import zov.crickclient.util.render.math.Animation;
-import zov.crickclient.util.render.math.Easing;
-import zov.crickclient.util.render.math.Scissor;
-import zov.crickclient.util.render.msdf.Fonts;
-import zov.crickclient.util.render.providers.ColorProvider;
-import zov.crickclient.util.render.renderers.DrawUtil;
+import fun.crickclient.client.ui.clickgui.util.CursorManager;
+import fun.crickclient.client.ui.clickgui.util.HoverUtil;
+import fun.crickclient.client.ui.clickgui.util.Animation;
+import fun.crickclient.client.ui.clickgui.util.Easing;
+import fun.crickclient.client.ui.clickgui.util.Scissor;
+import fun.crickclient.client.ui.clickgui.util.GuiFonts;
+import fun.crickclient.client.ui.clickgui.util.ColorProvider;
+import fun.crickclient.client.ui.clickgui.util.DrawUtil;
 
 /**
  * Полностью переписанное поле поиска.
@@ -67,7 +67,7 @@ public class SearchField {
     }
 
     private float widthOf(String s) {
-        return Fonts.GUI_BODY.get().getWidth(s, FONT_SIZE);
+        return GuiFonts.GUI_BODY.get().getWidth(s, FONT_SIZE);
     }
 
     private boolean hasSelection() {
@@ -110,13 +110,13 @@ public class SearchField {
                 ColorProvider.rgba(18, 20, 28, (int) (230 * ap)));
 
         // Иконка лупы
-        float iconW = Fonts.ICONS_MINCED.get().getWidth("l", 10f);
+        float iconW = GuiFonts.ICONS_MINCED.get().getWidth("l", 10f);
         float iconX = x + (ICON_BOX_W - iconW) / 2f + 1f;
         float iconY = ay + (height / 2f) - 4.5f;
         int iconColor = ColorProvider.interpolateColor(
                 ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) (160 * ap)),
                 ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) (255 * ap)), fa);
-        DrawUtil.drawText(Fonts.ICONS_MINCED.get(), "l", iconX, iconY, iconColor, 10f);
+        DrawUtil.drawText(GuiFonts.ICONS_MINCED.get(), "l", iconX, iconY, iconColor, 10f);
 
         float taX = textAreaX();
         float taW = textAreaW();
@@ -128,7 +128,7 @@ public class SearchField {
         Scissor.setFromComponentCoordinates(taX, ay, taW, height);
 
         if (text.isEmpty() && !focused) {
-            DrawUtil.drawText(Fonts.GUI_BODY.get(), placeholder, taX, textY,
+            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), placeholder, taX, textY,
                     ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (255 * ap)), FONT_SIZE);
         } else {
             // Выделение
@@ -139,7 +139,7 @@ public class SearchField {
                         ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (90 * ap)));
             }
 
-            DrawUtil.drawText(Fonts.GUI_BODY.get(), text, taX - scrollX, textY,
+            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), text, taX - scrollX, textY,
                     ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * ap)), FONT_SIZE);
 
             // Каретка (мигает)
