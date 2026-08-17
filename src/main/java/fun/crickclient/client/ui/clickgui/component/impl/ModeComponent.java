@@ -1,33 +1,37 @@
 package fun.crickclient.client.ui.clickgui.component.impl;
 
 import fun.crickclient.client.modules.settings.implement.ModeSetting;
+import fun.crickclient.client.ui.clickgui.ClickGuiStyles;
 import fun.crickclient.client.ui.clickgui.component.Component;
 import fun.crickclient.client.ui.clickgui.util.Animation;
-import fun.crickclient.client.ui.clickgui.util.ColorProvider;
 import fun.crickclient.client.ui.clickgui.util.CursorManager;
-import fun.crickclient.client.ui.clickgui.util.DrawUtil;
 import fun.crickclient.client.ui.clickgui.util.Easing;
 import fun.crickclient.client.ui.clickgui.util.GuiFonts;
 import fun.crickclient.client.ui.clickgui.util.HoverUtil;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.math.MathHelper;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/** Выбор одного режима из списка: ряд «чипов», подсвечивается выбранный. */
 public class ModeComponent extends Component {
     private final ModeSetting setting;
-    private static final float NAME_HEIGHT = 10f;
-    private static final float OPTION_H = 11f;
-    private static final float GAP = 2f;
+
+    private static final float NAME_HEIGHT = 11f;
+    private static final float OPTION_H = 13f;
+    private static final float GAP = 3f;
     private static final float PADDING = 4.5f;
-    private static final float RADIUS = 1f;
+    private static final float FONT_SIZE = 6.4f;
 
     private final List<Animation> anims = new ArrayList<>();
+    private final List<Animation> hoverAnims = new ArrayList<>();
 
     public ModeComponent(ModeSetting setting) {
         this.setting = setting;
         for (int i = 0; i < setting.getMods().size(); i++) {
             anims.add(new Animation(Easing.QUINTIC_OUT, 250));
+            hoverAnims.add(new Animation(Easing.QUINTIC_OUT, 170));
         }
     }
 
@@ -36,7 +40,7 @@ public class ModeComponent extends Component {
     }
 
     private float optionWidth(String mode) {
-        return GuiFonts.GUI_BODY.get().getWidth(label(mode), 7.5f) + 8f;
+        return GuiFonts.GUI_BODY.get().getWidth(label(mode), FONT_SIZE) + 12f;
     }
 
     private float calcHeight() {
@@ -62,16 +66,14 @@ public class ModeComponent extends Component {
     @Override
     public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
         float animValue = getAlphaAnimSetting().getValue();
-        float alpha = Math.max(Math.min(animValue * getAlphaAnim().getValue(), 1), 0);
-        int alphaInt = (int) (255 * alpha);
+        float alpha = MathHelper.clamp(animValue * getAlphaAnim().getValue(), 0f, 1f);
 
         if (alpha < 0.02f) return;
 
         float totalHeight = calcHeight();
-        setHeight((totalHeight + 2f) * animValue);
+        setHeight((totalHeight + 4f) * animValue);
 
-        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), setting.displayName(), x + PADDING, y + 1.5f,
-                ColorProvider.setAlpha(ColorProvider.getColorText(), alphaInt), 7.5f);
+        ClickGuiStyles.drawSettingLabel(setting.displayName(), x + PADDING, y, NAME_HEIGHT, alpha, 6.6f);
 
         float curX = x + PADDING;
         float curY = y + NAME_HEIGHT + GAP;
@@ -86,31 +88,14 @@ public class ModeComponent extends Component {
             }
             firstInRow = false;
 
-            boolean selected = setting.is(mode);
-            Animation anim = anims.get(Math.min(i, anims.size() - 1));
-            anim.run(selected);
-            float av = anim.getValue();
+            boolean hovered = HoverUtil.isHovered(mouseX, mouseY, curX, curY, ow, OPTION_H);
+            if (hovered) CursorManager.requestHand();
 
-            if (HoverUtil.isHovered(mouseX, mouseY, curX, curY, ow, OPTION_H)) {
-                CursorManager.requestHand();
-            }
+            int index = Math.min(i, anims.size() - 1);
+            float selected = MathHelper.clamp(anims.get(index).run(setting.is(mode) ? 1f : 0f), 0f, 1f);
+            float hover = MathHelper.clamp(hoverAnims.get(index).run(hovered ? 1f : 0f), 0f, 1f);
 
-            DrawUtil.drawRound(curX - 1f, curY - 1f, ow + 2f, OPTION_H + 2f, RADIUS + 0.5f,
-                    ColorProvider.rgba(48, 66, 122, (int) (90 * alpha)));
-
-            int bgColor = ColorProvider.interpolateColor(
-                    ColorProvider.setAlpha(ColorProvider.getColorInactiveButton(), alphaInt),
-                    ColorProvider.setAlpha(ColorProvider.getColorButton(), alphaInt),
-                    av);
-            DrawUtil.drawRound(curX, curY, ow, OPTION_H, RADIUS, bgColor);
-
-            int textColor = ColorProvider.interpolateColor(
-                    ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), alphaInt),
-                    ColorProvider.setAlpha(ColorProvider.getColorText(), alphaInt),
-                    av);
-            String text = label(mode);
-            float tw = GuiFonts.GUI_BODY.get().getWidth(text, 7.5f);
-            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), text, curX + (ow - tw) / 2f, curY + 1.75f, textColor, 7.5f);
+            ClickGuiStyles.drawChip(label(mode), curX, curY, ow, OPTION_H, alpha, selected, hover, FONT_SIZE);
 
             curX += ow + GAP;
             i++;

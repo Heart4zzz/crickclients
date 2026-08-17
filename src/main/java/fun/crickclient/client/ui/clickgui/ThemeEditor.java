@@ -11,6 +11,7 @@ import fun.crickclient.client.ui.clickgui.util.Easing;
 import fun.crickclient.client.ui.clickgui.util.GuiFonts;
 import fun.crickclient.client.ui.clickgui.util.HoverUtil;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.util.math.MathHelper;
 
 import java.util.List;
 
@@ -25,11 +26,13 @@ public class ThemeEditor implements QClient {
     public static final float COLLAPSED_W = 24f;
     public static final float POPUP_W = 132f;
 
-    private static final float TAB_H = 56f;
+    private static final float TAB_H = 58f;
+    private static final float TAB_RADIUS = 7f;
+    private static final float POPUP_RADIUS = 9f;
     private static final float HEADER_H = 22f;
     private static final float SWATCH = 16f;
     private static final float CELL_W = 40f;
-    private static final float CELL_H = 30f;
+    private static final float CELL_H = 31f;
     private static final int COLUMNS = 3;
     private static final float PADDING = 8f;
 
@@ -38,6 +41,7 @@ public class ThemeEditor implements QClient {
 
     private final Animation expandAnim = new Animation(Easing.QUINTIC_OUT, 280);
     private final Animation contentAnim = new Animation(Easing.QUINTIC_OUT, 220);
+    private final Animation hoverAnim = new Animation(Easing.QUINTIC_OUT, 180);
 
     private boolean expanded;
     private float anchorRight, anchorY, anchorH;
@@ -87,7 +91,11 @@ public class ThemeEditor implements QClient {
         tabX = anchorRight + 6f;
         tabY = anchorY + anchorH / 2f - TAB_H / 2f;
         popupX = tabX + COLLAPSED_W + 6f;
-        popupY = anchorY + anchorH - popupHeight();
+        // Попап центрируется относительно кнопки открытия, а не прижимается к низу окна,
+        // и при этом не вылезает за пределы окна клик гуи по вертикали.
+        float ph = popupHeight();
+        float centered = anchorY + anchorH / 2f - ph / 2f;
+        popupY = MathHelper.clamp(centered, anchorY, anchorY + anchorH - ph);
 
         renderTab(mouseX, mouseY);
 
@@ -99,17 +107,38 @@ public class ThemeEditor implements QClient {
     private void renderTab(int mouseX, int mouseY) {
         boolean hover = HoverUtil.isHovered(mouseX, mouseY, tabX, tabY, COLLAPSED_W, TAB_H);
         if (hover) CursorManager.requestHand();
+        hoverAnim.run(hover);
+        float hv = hoverAnim.getValue();
 
         int accent = ColorProvider.getColorClient();
-        DrawUtil.drawRound(tabX, tabY, COLLAPSED_W, TAB_H, 6f,
-                ColorProvider.rgba(16, 18, 26, (int) (245 * shellVisibility)));
-        DrawUtil.drawRound(tabX + 7f, tabY + 10f, 10f, 10f, 3f,
-                ColorProvider.setAlpha(accent, (int) (255 * shellVisibility)));
-        DrawUtil.drawRound(tabX + 7f, tabY + 24f, 10f, 10f, 3f,
-                ColorProvider.setAlpha(accent, (int) (130 * shellVisibility)));
-        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), expanded ? "<" : ">",
-                tabX + 8f, tabY + 40f,
-                ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (200 * shellVisibility)), 7f);
+        int a = (int) (255 * shellVisibility);
+
+        DrawUtil.drawRoundBlur(tabX, tabY + 2f, COLLAPSED_W, TAB_H, TAB_RADIUS,
+                ColorProvider.rgba(0, 0, 0, (int) (80 * shellVisibility)), 12f);
+        DrawUtil.drawRound(tabX, tabY, COLLAPSED_W, TAB_H, TAB_RADIUS,
+                ColorProvider.setAlpha(ClickGuiStyles.BG_TOP, (int) (250 * shellVisibility)),
+                ColorProvider.setAlpha(ClickGuiStyles.BG_TOP, (int) (250 * shellVisibility)),
+                ColorProvider.setAlpha(ClickGuiStyles.BG_BOTTOM, (int) (250 * shellVisibility)),
+                ColorProvider.setAlpha(ClickGuiStyles.BG_BOTTOM, (int) (250 * shellVisibility)));
+        DrawUtil.drawRoundOutline(tabX, tabY, COLLAPSED_W, TAB_H, TAB_RADIUS, 1f,
+                ColorProvider.rgba(255, 255, 255, (int) ((16 + 18 * hv) * shellVisibility)));
+
+        // Две «пилюли» цвета текущей темы — визуальная метафора палитры.
+        float dotW = COLLAPSED_W - 13f;
+        float dotX = tabX + 6.5f;
+        int currentColor = ColorProvider.setAlpha(displayColor(CrickClient.INSTANCE.themeStorage.getThemes()), a);
+
+        DrawUtil.drawRoundBlur(dotX, tabY + 11f, dotW, dotW, dotW / 2f,
+                ColorProvider.setAlpha(accent, (int) (90 * shellVisibility)), 5f);
+        DrawUtil.drawRound(dotX, tabY + 11f, dotW, dotW, dotW / 2f, currentColor);
+        DrawUtil.drawRound(dotX, tabY + 11f + dotW + 3f, dotW, dotW, dotW / 2f,
+                ColorProvider.setAlpha(accent, (int) (90 * shellVisibility)));
+
+        // Стрелка направления — по центру нижней части кнопки.
+        DrawUtil.drawTextCentered(GuiFonts.GUI_BODY.get(), expanded ? "<" : ">",
+                tabX, tabY + TAB_H - 14f, COLLAPSED_W, 12f,
+                ColorProvider.setAlpha(ColorProvider.getColorInactiveText(),
+                        (int) ((190 + 65 * hv) * shellVisibility)), 6.5f);
     }
 
     private void renderPopup(int mouseX, int mouseY, float alpha) {
@@ -119,14 +148,22 @@ public class ThemeEditor implements QClient {
         float px = popupX + slide;
         float ph = popupHeight();
 
-        DrawUtil.drawRound(px, popupY, POPUP_W, ph, 7f,
-                ColorProvider.rgba(16, 18, 26, (int) (245 * combined)));
+        DrawUtil.drawRoundBlur(px, popupY + 3f, POPUP_W, ph, POPUP_RADIUS,
+                ColorProvider.rgba(0, 0, 0, (int) (95 * combined)), 18f);
+        DrawUtil.drawRound(px, popupY, POPUP_W, ph, POPUP_RADIUS,
+                ColorProvider.setAlpha(ClickGuiStyles.BG_TOP, (int) (250 * combined)),
+                ColorProvider.setAlpha(ClickGuiStyles.BG_TOP, (int) (250 * combined)),
+                ColorProvider.setAlpha(ClickGuiStyles.BG_BOTTOM, (int) (250 * combined)),
+                ColorProvider.setAlpha(ClickGuiStyles.BG_BOTTOM, (int) (250 * combined)));
+        DrawUtil.drawRoundOutline(px, popupY, POPUP_W, ph, POPUP_RADIUS, 1f,
+                ColorProvider.rgba(255, 255, 255, (int) (24 * combined)),
+                ColorProvider.rgba(255, 255, 255, (int) (7 * combined)));
 
-        DrawUtil.drawText(GuiFonts.GUI_TITLE.get(), "Themes", px + PADDING, popupY + 7f,
-                ColorProvider.setAlpha(ColorProvider.getColorText(), a), 7.5f);
+        DrawUtil.drawTextVCentered(GuiFonts.GUI_TITLE.get(), "Themes", px + PADDING, popupY, HEADER_H,
+                ColorProvider.setAlpha(ColorProvider.getColorText(), a), 7f);
 
-        DrawUtil.drawRound(px + PADDING, popupY + HEADER_H - 4f, POPUP_W - PADDING * 2f, 0.5f, 0.25f,
-                ColorProvider.rgba(255, 255, 255, (int) (10 * combined)));
+        DrawUtil.drawRound(px + PADDING, popupY + HEADER_H - 4f, POPUP_W - PADDING * 2f, 0.8f, 0.4f,
+                ColorProvider.rgba(255, 255, 255, (int) (12 * combined)));
 
         List<ThemeStorage.Themes> themes = themes();
         ThemeStorage.Themes selected = CrickClient.INSTANCE.themeStorage.getThemes();
@@ -135,27 +172,41 @@ public class ThemeEditor implements QClient {
             ThemeStorage.Themes theme = themes.get(i);
             float cellX = px + PADDING + (i % COLUMNS) * CELL_W;
             float cellY = popupY + HEADER_H + (i / COLUMNS) * CELL_H;
-            boolean hover = HoverUtil.isHovered(mouseX, mouseY, cellX, cellY, CELL_W - 2f, CELL_H - 2f);
+            float cellW = CELL_W - 2f;
+            float cellH = CELL_H - 2f;
+            boolean hover = HoverUtil.isHovered(mouseX, mouseY, cellX, cellY, cellW, cellH);
             if (hover && combined > 0.9f) CursorManager.requestHand();
 
-            float swatchX = cellX + (CELL_W - 2f - SWATCH) / 2f;
+            boolean isSelected = theme == selected;
             int color = ColorProvider.setAlpha(displayColor(theme), a);
+            float swatchX = cellX + (cellW - SWATCH) / 2f;
+            float swatchY = cellY + 1f;
 
-            if (theme == selected) {
-                DrawUtil.drawRound(swatchX - 1.5f, cellY - 1.5f, SWATCH + 3f, SWATCH + 3f, 5f,
-                        ColorProvider.setAlpha(displayColor(theme), (int) (110 * combined)));
+            // Подложка ячейки: у выбранной — акцентная, у наведённой — светлая.
+            if (isSelected) {
+                DrawUtil.drawRound(cellX, cellY, cellW, cellH, 6f,
+                        ColorProvider.setAlpha(displayColor(theme), (int) (34 * combined)));
+                DrawUtil.drawRoundOutline(cellX, cellY, cellW, cellH, 6f, 1f,
+                        ColorProvider.setAlpha(displayColor(theme), (int) (150 * combined)));
             } else if (hover) {
-                DrawUtil.drawRound(swatchX - 1f, cellY - 1f, SWATCH + 2f, SWATCH + 2f, 4.5f,
-                        ColorProvider.rgba(255, 255, 255, (int) (14 * combined)));
+                DrawUtil.drawRound(cellX, cellY, cellW, cellH, 6f,
+                        ColorProvider.rgba(255, 255, 255, (int) (16 * combined)));
             }
 
-            DrawUtil.drawRound(swatchX, cellY, SWATCH, SWATCH, 4f, color);
+            if (isSelected || hover) {
+                DrawUtil.drawRoundBlur(swatchX, swatchY, SWATCH, SWATCH, 5f,
+                        ColorProvider.setAlpha(displayColor(theme),
+                                (int) ((isSelected ? 130 : 70) * combined)), 6f);
+            }
+
+            DrawUtil.drawRound(swatchX, swatchY, SWATCH, SWATCH, 5f, color);
+            DrawUtil.drawRoundOutline(swatchX, swatchY, SWATCH, SWATCH, 5f, 0.8f,
+                    ColorProvider.rgba(255, 255, 255, (int) (40 * combined)));
 
             String name = theme.getTheme().getName();
-            float nameW = GuiFonts.GUI_BODY.get().getWidth(name, 4.8f);
-            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), name,
-                    cellX + (CELL_W - 2f - nameW) / 2f, cellY + SWATCH + 1.5f,
-                    ColorProvider.setAlpha(theme == selected
+            DrawUtil.drawTextCentered(GuiFonts.GUI_BODY.get(), name,
+                    cellX, swatchY + SWATCH, cellW, cellH - SWATCH - 1f,
+                    ColorProvider.setAlpha(isSelected
                             ? ColorProvider.getColorText()
                             : ColorProvider.getColorInactiveText(), a), 4.8f);
         }

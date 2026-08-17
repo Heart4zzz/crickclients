@@ -19,7 +19,16 @@ import java.math.RoundingMode;
 public class SliderComponent extends Component {
     private final FloatSetting setting;
     private boolean drag;
+
+    private static final float ROW_H = 24f;
+    private static final float LABEL_H = 12f;
+    private static final float TRACK_H = 3.5f;
+    private static final float PADDING = 4.5f;
+    private static final float FONT_SIZE = 6.6f;
+
     private final Animation sliderAnimation = new Animation(Easing.QUINTIC_OUT, 100);
+    private final Animation hoverAnim = new Animation(Easing.QUINTIC_OUT, 170);
+    private final Animation dragAnim = new Animation(Easing.QUINTIC_OUT, 150);
 
     public SliderComponent(FloatSetting setting) {
         this.setting = setting;
@@ -36,55 +45,95 @@ public class SliderComponent extends Component {
                 .stripTrailingZeros().toPlainString();
     }
 
+    private float trackX() {
+        return x + PADDING + 1f;
+    }
+
+    private float trackWidth() {
+        return width - (PADDING + 1f) * 2f;
+    }
+
+    private float trackY() {
+        return y + LABEL_H + 4f;
+    }
+
     @Override
     public void render(MatrixStack matrixStack, int mouseX, int mouseY, float partialTicks) {
-        float alpha = Math.min(getAlphaAnimSetting().getValue(), 1) * Math.max(Math.min(getAlphaAnim().getValue(), 1), 0);
+        float alpha = MathHelper.clamp(getAlphaAnimSetting().getValue(), 0f, 1f)
+                * MathHelper.clamp(getAlphaAnim().getValue(), 0f, 1f);
         int alphaInt = (int) (255 * alpha);
+        if (alpha < 0.02f) {
+            setHeight(ROW_H);
+            return;
+        }
 
-        String numberText = formatNumber(setting.get());
-        float trackWidth = width - 9f;
+        int accent = ColorProvider.getColorClient();
+        float trackX = trackX();
+        float trackW = trackWidth();
+        float trackY = trackY();
         float range = Math.max(0.0001f, setting.getMax() - setting.getMin());
 
-        sliderAnimation.run(trackWidth * (setting.get() - setting.getMin()) / range);
+        sliderAnimation.run(trackW * (setting.get() - setting.getMin()) / range);
+        float fillWidth = MathHelper.clamp(sliderAnimation.getValue(), 0f, trackW);
 
-        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), setting.displayName(), x + 4.5f, y + 3f,
-                ColorProvider.setAlpha(ColorProvider.getColorText(), alphaInt), 7.5f, 0.6f, 1.0f, trackWidth);
+        // Зона захвата шире самой дорожки — попасть по тонкому слайдеру иначе тяжело.
+        boolean hovered = HoverUtil.isHovered(mouseX, mouseY, x + 2f, trackY - 6f, width - 4f, 13f);
+        if (hovered || drag) CursorManager.requestHand();
+        float hover = MathHelper.clamp(hoverAnim.run(hovered || drag ? 1f : 0f), 0f, 1f);
+        float dragging = MathHelper.clamp(dragAnim.run(drag ? 1f : 0f), 0f, 1f);
 
-        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), numberText,
-                x + width - 4.5f - GuiFonts.GUI_BODY.get().getWidth(numberText, 7.5f), y + 1f,
-                ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), alphaInt), 7.5f);
+        // Название слева, значение — справа, обе строки на одной оптической линии.
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), setting.displayName(),
+                x + PADDING + 1f, DrawUtil.centeredTextY(GuiFonts.GUI_BODY.get(), y, LABEL_H, FONT_SIZE),
+                ColorProvider.setAlpha(ColorProvider.getColorText(), alphaInt),
+                FONT_SIZE, 0.4f, 1f, trackW - 34f);
 
-        float trackY = y + 14f;
-        DrawUtil.drawRound(x + 3f, trackY - 3.5f, trackWidth + 1, 4, 1f,
-                ColorProvider.setAlpha(ColorProvider.getColorSliderWindow(), (int) (100 * alpha)));
-        DrawUtil.drawRound(x + 3.5f, trackY - 3, trackWidth, 3, 1f,
-                ColorProvider.setAlpha(ColorProvider.getColorSliderWindow(), alphaInt));
+        String numberText = formatNumber(setting.get());
+        float valueW = GuiFonts.GUI_BODY.get().getWidth(numberText, FONT_SIZE) + 9f;
+        float valueH = 10.5f;
+        float valueX = x + width - PADDING - 1f - valueW;
+        float valueY = y + (LABEL_H - valueH) / 2f;
+        DrawUtil.drawRound(valueX, valueY, valueW, valueH, 3.5f,
+                ColorProvider.setAlpha(accent, (int) ((26 + 24 * hover) * alpha)));
+        DrawUtil.drawTextCentered(GuiFonts.GUI_BODY.get(), numberText, valueX, valueY, valueW, valueH,
+                ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (240 * alpha)), 6f);
 
-        float fillWidth = MathHelper.clamp(sliderAnimation.getValue(), 0, trackWidth);
-        int sliderColor = ColorProvider.setAlpha(ColorProvider.getColorSlider(), alphaInt);
-        DrawUtil.drawRound(x + 3.5f, trackY - 3.5f, fillWidth, 4, 1f, sliderColor);
+        // Дорожка.
+        DrawUtil.drawRound(trackX, trackY, trackW, TRACK_H, TRACK_H / 2f,
+                ColorProvider.rgba(255, 255, 255, (int) (16 * alpha)));
 
-        float circleSize = drag ? 7f : 5.5f;
-        float circleX = x + 3.5f + fillWidth;
-        float circleY = trackY - 1.5f;
-        DrawUtil.drawRound(circleX - circleSize / 2f, circleY - circleSize / 2f, circleSize, circleSize,
-                circleSize / 2f, ColorProvider.setAlpha(ColorProvider.getColorSliderCircle(), alphaInt));
-
-        if (HoverUtil.isHovered(mouseX, mouseY, x + 3f, y + 8f, width - 6f, 8f)) {
-            CursorManager.requestHand();
+        // Заполнение с градиентом акцента.
+        if (fillWidth > 0.5f) {
+            DrawUtil.drawRoundBlur(trackX, trackY, fillWidth, TRACK_H, TRACK_H / 2f,
+                    ColorProvider.setAlpha(accent, (int) ((45 + 45 * hover) * alpha)), 5f);
+            DrawUtil.drawRound(trackX, trackY, fillWidth, TRACK_H, TRACK_H / 2f,
+                    ColorProvider.setAlpha(ColorProvider.lighten(accent, 0.18f), alphaInt),
+                    ColorProvider.setAlpha(accent, alphaInt),
+                    ColorProvider.setAlpha(ColorProvider.lighten(accent, 0.18f), alphaInt),
+                    ColorProvider.setAlpha(accent, alphaInt));
         }
+
+        // Ползунок: растёт при наведении и захвате.
+        float knob = 6f + hover * 1.2f + dragging * 1.3f;
+        float knobX = trackX + fillWidth - knob / 2f;
+        float knobY = trackY + TRACK_H / 2f - knob / 2f;
+        DrawUtil.drawRoundBlur(knobX, knobY + 0.5f, knob, knob, knob / 2f,
+                ColorProvider.rgba(0, 0, 0, (int) (80 * alpha)), 4f);
+        DrawUtil.drawRound(knobX, knobY, knob, knob, knob / 2f,
+                ColorProvider.rgba(255, 255, 255, alphaInt));
 
         if (drag) {
-            double val = (mouseX - (x + 3.5f)) / trackWidth * range + setting.getMin();
-            setting.setValue((float) MathHelper.clamp(round(val, setting.getIncrement()), setting.getMin(), setting.getMax()));
+            double val = (mouseX - trackX) / trackW * range + setting.getMin();
+            setting.setValue((float) MathHelper.clamp(round(val, setting.getIncrement()),
+                    setting.getMin(), setting.getMax()));
         }
 
-        setHeight(15);
+        setHeight(ROW_H);
     }
 
     @Override
     public void mouseClicked(double mouseX, double mouseY, int button) {
-        if (HoverUtil.isHovered(mouseX, mouseY, x + 3f, y + 8f, width - 6f, 8f) && button == 0) {
+        if (button == 0 && HoverUtil.isHovered(mouseX, mouseY, x + 2f, trackY() - 6f, width - 4f, 13f)) {
             drag = true;
         }
     }

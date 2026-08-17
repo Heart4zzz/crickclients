@@ -28,7 +28,7 @@ public class SearchField {
     private float scrollX;       // горизонтальный сдвиг текста, чтобы каретка была видна
 
     private static final float ICON_BOX_W = 17f;
-    private static final float RADIUS = 5f;
+    private static final float RADIUS = 6f;
     private static final float FONT_SIZE = 6.5f;
     private static final int MAX_LENGTH = 64;
 
@@ -101,26 +101,34 @@ public class SearchField {
         focusAnim.run(focused);
         float fa = (float) focusAnim.getValue();
 
-        // Фон в стиле shell
-        DrawUtil.drawRoundBlur(x, ay, width, height, 6f,
-                ColorProvider.rgba(0, 0, 0, (int) (40 * ap)), 10f);
-        DrawUtil.drawRound(x - 0.5f, ay - 0.5f, width + 1f, height + 1f, 6.5f,
-                ColorProvider.rgba(255, 255, 255, (int) (14 * ap)));
-        DrawUtil.drawRound(x, ay, width, height, 6f,
-                ColorProvider.rgba(18, 20, 28, (int) (230 * ap)));
+        // Фон поля: тёмная «врезка» с обводкой, которая загорается акцентом при фокусе.
+        DrawUtil.drawRoundBlur(x, ay + 1.5f, width, height, RADIUS,
+                ColorProvider.rgba(0, 0, 0, (int) (60 * ap)), 8f);
+        DrawUtil.drawRound(x, ay, width, height, RADIUS,
+                ColorProvider.rgba(13, 14, 20, (int) (235 * ap)));
 
-        // Иконка лупы
-        float iconW = GuiFonts.ICONS_MINCED.get().getWidth("l", 10f);
-        float iconX = x + (ICON_BOX_W - iconW) / 2f + 1f;
-        float iconY = ay + (height / 2f) - 4.5f;
+        if (fa > 0.01f) {
+            DrawUtil.drawRoundBlur(x, ay, width, height, RADIUS,
+                    ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (55 * fa * ap)), 7f);
+        }
+        DrawUtil.drawRoundOutline(x, ay, width, height, RADIUS, 1f,
+                ColorProvider.interpolateColor(
+                        ColorProvider.rgba(255, 255, 255, (int) ((14 + 10 * (hovered ? 1f : 0f)) * ap)),
+                        ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (165 * ap)),
+                        fa));
+
+        // Иконка лупы — по центру своей колонки.
+        float iconSize = 8.5f;
+        float iconW = GuiFonts.ICONS_MINCED.get().getWidth("l", iconSize);
         int iconColor = ColorProvider.interpolateColor(
-                ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) (160 * ap)),
+                ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) (150 * ap)),
                 ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) (255 * ap)), fa);
-        DrawUtil.drawText(GuiFonts.ICONS_MINCED.get(), "l", iconX, iconY, iconColor, 10f);
+        DrawUtil.drawTextVCentered(GuiFonts.ICONS_MINCED.get(), "l",
+                x + (ICON_BOX_W - iconW) / 2f + 1f, ay, height, iconColor, iconSize);
 
         float taX = textAreaX();
         float taW = textAreaW();
-        float textY = ay + (height / 2f) - FONT_SIZE / 2f + 0.2f;
+        float textY = DrawUtil.centeredTextY(GuiFonts.GUI_BODY.get(), ay, height, FONT_SIZE);
 
         updateScroll(taW);
 
@@ -135,8 +143,8 @@ public class SearchField {
             if (hasSelection()) {
                 float selX1 = taX - scrollX + widthOf(text.substring(0, selMin()));
                 float selX2 = taX - scrollX + widthOf(text.substring(0, selMax()));
-                DrawUtil.drawRound(selX1, ay + 3f, selX2 - selX1, height - 6f, 1.5f,
-                        ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (90 * ap)));
+                DrawUtil.drawRound(selX1, ay + 3.5f, selX2 - selX1, height - 7f, 2f,
+                        ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (95 * ap)));
             }
 
             DrawUtil.drawText(GuiFonts.GUI_BODY.get(), text, taX - scrollX, textY,
@@ -145,8 +153,8 @@ public class SearchField {
             // Каретка (мигает)
             if (focused && System.currentTimeMillis() % 1000 > 500) {
                 float caretX = taX - scrollX + widthOf(text.substring(0, caret));
-                DrawUtil.drawRound(caretX, ay + 3f, 0.8f, height - 6f, 0f,
-                        ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (230 * ap)));
+                DrawUtil.drawRound(caretX, ay + 3.5f, 0.9f, height - 7f, 0.45f,
+                        ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (240 * ap)));
             }
         }
 

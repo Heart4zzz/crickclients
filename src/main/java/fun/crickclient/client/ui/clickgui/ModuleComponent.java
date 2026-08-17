@@ -102,9 +102,8 @@ public class ModuleComponent extends Component {
         ClickGuiStyles.drawModuleCard(x, y, width, currentHeight - 0.5f, headerH, alpha, enabled, hover, open);
 
         if (binding) {
-            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), "Press key...",
-                    x + width / 2f - GuiFonts.GUI_BODY.get().getWidth("Press key...", 6.5f) / 2f,
-                    y + headerH / 2f - 3f, ColorProvider.rgba(255, 255, 255, (int) (255 * alpha)), 6.5f);
+            DrawUtil.drawTextCentered(GuiFonts.GUI_BODY.get(), "Press key...", x, y, width, headerH,
+                    ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (255 * alpha)), 6.5f);
         } else {
             renderRowContent(alpha, enabled, headerH);
         }
@@ -115,48 +114,65 @@ public class ModuleComponent extends Component {
     }
 
     private void renderRowContent(float alpha, float enabled, float headerH) {
-        float padX = 8f;
-        float titleY = y + 6f;
-        float right = x + width - 6f;
+        float padX = 9f;
+        String desc = description();
+        boolean hasDesc = !desc.isEmpty();
 
+        // Полоса, по которой центрируются все элементы шапки. Если описание есть,
+        // элементы управления центрируются по строке заголовка, а не по всей шапке.
+        float rowH = hasDesc ? 19f : headerH;
+        float rowY = y;
+
+        float right = x + width - padX;
+
+        // Тумблер справа, строго по центру строки.
         float toggleW = ClickGuiStyles.TOGGLE_W;
         float toggleX = right - toggleW;
-        float toggleY = y + 7f;
-        right = toggleX - 3f;
-
-        if (!components.isEmpty()) right -= 8f;
-        if (module.getKey() != -1) {
-            right -= GuiFonts.GUI_BODY.get().getWidth(KeyBoardUtils.getBindName(module.getKey()), 5.5f) + 10f;
-        }
-
-        float maxTextW = Math.max(36f, right - (x + padX));
-        ClickGuiStyles.drawModuleTitle(module.getDisplayName(), x + padX, titleY, maxTextW, alpha, enabled);
-
-        String desc = description();
-        if (!desc.isEmpty()) {
-            float descMaxW = width - padX * 2f;
-            ClickGuiStyles.drawModuleDesc(desc, x + padX, titleY + 9f, descMaxW, alpha);
-        }
-
+        float toggleY = rowY + (rowH - ClickGuiStyles.TOGGLE_H) / 2f;
         ClickGuiStyles.drawToggle(toggleX, toggleY, alpha, enabled);
-        right = toggleX - 3f;
+        right = toggleX - 5f;
 
+        // Шеврон раскрытия настроек.
         if (!components.isEmpty()) {
             String chevron = open ? "^" : "v";
             float chevronW = GuiFonts.GUI_BODY.get().getWidth(chevron, 6f);
-            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), chevron, right - chevronW, titleY + 1f,
-                    ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (180 * alpha)), 6f);
-            right -= chevronW + 3f;
+            int chevronColor = ColorProvider.setAlpha(ColorProvider.getColorInactiveText(),
+                    (int) ((150 + 80 * chevronAnim.getValue()) * alpha));
+            // «^» рисуется выше базовой линии, поэтому центрируем его вручную.
+            float chevronY = rowY + rowH / 2f - (open ? 5.2f : 3.4f);
+            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), chevron, right - chevronW, chevronY, chevronColor, 6f);
+            right -= chevronW + 5f;
         }
 
+        // Бейдж бинда.
         if (module.getKey() != -1) {
             String key = KeyBoardUtils.getBindName(module.getKey());
             float keyW = GuiFonts.GUI_BODY.get().getWidth(key, 5.5f);
-            float keyBoxW = keyW + 8f;
+            float keyBoxW = keyW + 9f;
+            float keyBoxH = 11f;
             float keyX = right - keyBoxW;
-            DrawUtil.drawRound(keyX, y + 8f, keyBoxW, 10f, 3f, ColorProvider.rgba(255, 255, 255, (int) (10 * alpha)));
-            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), key, keyX + 4f, y + 9.5f,
-                    ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (190 * alpha)), 5.5f);
+            float keyY = rowY + (rowH - keyBoxH) / 2f;
+
+            DrawUtil.drawRound(keyX, keyY, keyBoxW, keyBoxH, 3.5f,
+                    ColorProvider.rgba(255, 255, 255, (int) (11 * alpha)));
+            DrawUtil.drawRoundOutline(keyX, keyY, keyBoxW, keyBoxH, 3.5f, 0.8f,
+                    ColorProvider.rgba(255, 255, 255, (int) (14 * alpha)));
+            DrawUtil.drawTextCentered(GuiFonts.GUI_BODY.get(), key, keyX, keyY, keyBoxW, keyBoxH,
+                    ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (200 * alpha)), 5.5f);
+            right = keyX - 5f;
+        }
+
+        float maxTextW = Math.max(36f, right - (x + padX));
+
+        if (hasDesc) {
+            // Заголовок и описание — единый блок, отцентрованный по высоте шапки.
+            float blockH = 17f;
+            float blockY = y + (headerH - blockH) / 2f;
+            ClickGuiStyles.drawModuleTitle(module.getDisplayName(), x + padX, blockY, maxTextW, alpha, enabled);
+            ClickGuiStyles.drawModuleDesc(desc, x + padX, blockY + 9.5f, width - padX * 2f, alpha);
+        } else {
+            float titleY = DrawUtil.centeredTextY(GuiFonts.GUI_TITLE.get(), rowY, rowH, 7.2f);
+            ClickGuiStyles.drawModuleTitle(module.getDisplayName(), x + padX, titleY, maxTextW, alpha, enabled);
         }
     }
 
@@ -169,8 +185,13 @@ public class ModuleComponent extends Component {
         float intersectBottom = Math.min(y + currentHeight, panelBottom);
         float intersectHeight = Math.max(0, intersectBottom - intersectY);
 
-        DrawUtil.drawRound(x + 8f, y + headerH, width - 16f, 0.5f, 0.25f,
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (30 * alpha * animation.getValue())));
+        // Разделитель между шапкой и настройками: акцент в центре, гаснет к краям.
+        float sepAlpha = alpha * animation.getValue();
+        int sepMid = ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (70 * sepAlpha));
+        int sepEdge = ColorProvider.setAlpha(ColorProvider.getColorClient(), 0);
+        DrawUtil.drawRound(x + 8f, y + headerH, (width - 16f) / 2f, 0.8f, 0.4f, sepEdge, sepMid, sepEdge, sepMid);
+        DrawUtil.drawRound(x + 8f + (width - 16f) / 2f, y + headerH, (width - 16f) / 2f, 0.8f, 0.4f,
+                sepMid, sepEdge, sepMid, sepEdge);
 
         for (Component component : components) {
             component.getAlphaAnim().setValue(Math.min(panel.getAnimationAlpha().getValue(), 1) * animation.getValue());
