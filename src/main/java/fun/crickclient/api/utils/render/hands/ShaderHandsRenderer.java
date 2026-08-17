@@ -32,6 +32,8 @@ public class ShaderHandsRenderer implements QClient {
     private Framebuffer beforeBuffer;
     private Framebuffer afterBuffer;
     private Framebuffer maskBuffer;
+    private Framebuffer smokeHistoryA;
+    private Framebuffer smokeHistoryB;
     private final List<Framebuffer> bloomBuffers = new ArrayList<>();
     private int width = -1;
     private int height = -1;
@@ -39,6 +41,10 @@ public class ShaderHandsRenderer implements QClient {
     private boolean pendingComposite;
     private int configuredBeforeDepthTex = -1;
     private int configuredAfterDepthTex = -1;
+    private boolean smokeCurrentIsA = true;
+    private boolean smokeHistoryValid;
+    private boolean smokeWasEnabled;
+    private long lastSmokeUpdateNanos;
 
     public static ShaderHandsRenderer getInstance() {
         if (instance == null) instance = new ShaderHandsRenderer();
@@ -47,6 +53,7 @@ public class ShaderHandsRenderer implements QClient {
 
     public void captureBeforeHands() {
         ShaderHands module = getModule();
+        synchronizeSmokeState(module);
         if (!isEffectEnabled(module)) {
             invalidateState();
             return;
@@ -76,6 +83,7 @@ public class ShaderHandsRenderer implements QClient {
         ensureBuffers();
         if (beforeBuffer == null || afterBuffer == null || maskBuffer == null) return;
         ShaderHands module = getModule();
+        synchronizeSmokeState(module);
         if (!isEffectEnabled(module)) {
             invalidateState();
             return;
@@ -121,8 +129,19 @@ public class ShaderHandsRenderer implements QClient {
                 : CrickClient.INSTANCE.themeStorage.getThemes().getTheme().color[0];
         int color2 = color1;
 
+        if (module.smoke.isState()) {
+            int smokeTexture = updateSmokeDensity();
+            if (smokeTexture != 0) {
+                renderSmoke(smokeTexture, ColorUtils.getThemeColor(0), ColorUtils.getThemeColor(180));
+            }
+        }
+
         if (module.mode.is("Красивый")) {
-            renderPrettyMode(module, color1, color2, glowValue, fillValue, alphaValue, outlineValue);
+            if (hasGlow || hasFill) {
+                renderPrettyMode(module, color1, color2, glowValue, fillValue, alphaValue, outlineValue);
+            } else {
+                restoreCompositeState();
+            }
             invalidateState();
             return;
         }
@@ -185,6 +204,106 @@ public class ShaderHandsRenderer implements QClient {
         pendingComposite = false;
         configuredBeforeDepthTex = -1;
         configuredAfterDepthTex = -1;
+    }
+
+    public void resetSmokeHistory() {
+        smokeHistoryValid = false;
+        smokeCurrentIsA = true;
+        smokeWasEnabled = false;
+        lastSmokeUpdateNanos = 0L;
+    }
+
+    private void synchronizeSmokeState(ShaderHands module) {
+        boolean enabled = module != null && module.isEnable() && module.smoke.isState();
+        if (enabled != smokeWasEnabled) {
+            smokeHistoryValid = false;
+            smokeCurrentIsA = true;
+            lastSmokeUpdateNanos = 0L;
+            smokeWasEnabled = enabled;
+        }
+    }
+
+    private int updateSmokeDensity() {
+        if (smokeHistoryA == null || smokeHistoryB == null || maskBuffer == null) return 0;
+
+        ShaderProgram shader = mc.getShaderLoader().getOrCreateProgram(ShaderUtils.shaderHandsSmokeUpdate);
+        if (shader == null) return 0;
+
+        if (!smokeHistoryValid) {
+            clearSmokeFramebuffer(smokeHistoryA);
+            clearSmokeFramebuffer(smokeHistoryB);
+            mc.getFramebuffer().beginWrite(true);
+            smokeCurrentIsA = true;
+            smokeHistoryValid = true;
+        }
+
+        long now = System.nanoTime();
+        float deltaTime = lastSmokeUpdateNanos == 0L
+                ? 1.0f / 60.0f
+                : (now - lastSmokeUpdateNanos) / 1_000_000_000.0f;
+        lastSmokeUpdateNanos = now;
+        if (deltaTime > 0.25f) {
+            clearSmokeFramebuffer(smokeHistoryA);
+            clearSmokeFramebuffer(smokeHistoryB);
+            mc.getFramebuffer().beginWrite(true);
+            smokeCurrentIsA = true;
+            deltaTime = 1.0f / 60.0f;
+        }
+        deltaTime = Math.max(0.001f, Math.min(0.05f, deltaTime));
+
+        Framebuffer read = smokeCurrentIsA ? smokeHistoryA : smokeHistoryB;
+        Framebuffer write = smokeCurrentIsA ? smokeHistoryB : smokeHistoryA;
+        write.setClearColor(0f, 0f, 0f, 0f);
+        write.clear();
+        write.beginWrite(false);
+
+        RenderSystem.colorMask(true, true, true, true);
+        RenderSystem.disableDepthTest();
+        RenderSystem.disableBlend();
+        RenderSystem.setShader(ShaderUtils.shaderHandsSmokeUpdate);
+        RenderSystem.setShaderTexture(0, maskBuffer.getColorAttachment());
+        RenderSystem.setShaderTexture(1, read.getColorAttachment());
+        setUniform(shader, "texelSize", 1.0f / Math.max(1, width), 1.0f / Math.max(1, height));
+        setUniform(shader, "time", (System.currentTimeMillis() % 100000L) / 1000.0f);
+        setUniform(shader, "deltaTime", deltaTime);
+        drawFullscreenQuad();
+
+        smokeCurrentIsA = write == smokeHistoryA;
+        RenderSystem.setShaderTexture(0, 0);
+        RenderSystem.setShaderTexture(1, 0);
+        RenderSystem.enableDepthTest();
+        mc.getFramebuffer().beginWrite(true);
+        return write.getColorAttachment();
+    }
+
+    private void renderSmoke(int smokeTexture, int color1, int color2) {
+        ShaderProgram shader = mc.getShaderLoader().getOrCreateProgram(ShaderUtils.shaderHandsSmokeComposite);
+        if (shader == null) return;
+
+        mc.getFramebuffer().beginWrite(false);
+        RenderSystem.enableBlend();
+        RenderSystem.colorMask(true, true, true, false);
+        RenderSystem.disableDepthTest();
+        RenderSystem.blendFuncSeparate(
+                GlStateManager.SrcFactor.SRC_ALPHA,
+                GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA,
+                GlStateManager.SrcFactor.ZERO,
+                GlStateManager.DstFactor.ONE
+        );
+        RenderSystem.setShader(ShaderUtils.shaderHandsSmokeComposite);
+        RenderSystem.setShaderTexture(0, smokeTexture);
+        RenderSystem.setShaderTexture(1, maskBuffer.getColorAttachment());
+        setUniform(shader, "texelSize", 1.0f / Math.max(1, width), 1.0f / Math.max(1, height));
+        setUniform(shader, "color", ColorUtils.redf(color1), ColorUtils.greenf(color1), ColorUtils.bluef(color1));
+        setUniform(shader, "color2", ColorUtils.redf(color2), ColorUtils.greenf(color2), ColorUtils.bluef(color2));
+        setUniform(shader, "time", (System.currentTimeMillis() % 100000L) / 1000.0f);
+        drawFullscreenQuad();
+        restoreCompositeState();
+    }
+
+    private void clearSmokeFramebuffer(Framebuffer framebuffer) {
+        framebuffer.setClearColor(0f, 0f, 0f, 0f);
+        framebuffer.clear();
     }
 
     private int runKawaseBloom(int iterations) {
@@ -263,11 +382,14 @@ public class ShaderHandsRenderer implements QClient {
     private void ensureBuffers() {
         int w = mc.getWindow().getFramebufferWidth();
         int h = mc.getWindow().getFramebufferHeight();
-        if (w == width && h == height && beforeBuffer != null && afterBuffer != null && maskBuffer != null) return;
+        if (w == width && h == height && beforeBuffer != null && afterBuffer != null && maskBuffer != null
+                && smokeHistoryA != null && smokeHistoryB != null) return;
 
         if (beforeBuffer != null) beforeBuffer.delete();
         if (afterBuffer != null) afterBuffer.delete();
         if (maskBuffer != null) maskBuffer.delete();
+        if (smokeHistoryA != null) smokeHistoryA.delete();
+        if (smokeHistoryB != null) smokeHistoryB.delete();
         for (Framebuffer fb : bloomBuffers) {
             fb.delete();
         }
@@ -276,10 +398,20 @@ public class ShaderHandsRenderer implements QClient {
         beforeBuffer = new SimpleFramebuffer(w, h, true);
         afterBuffer = new SimpleFramebuffer(w, h, true);
         maskBuffer = new SimpleFramebuffer(w, h, true);
+        smokeHistoryA = new SimpleFramebuffer(w, h, false);
+        smokeHistoryB = new SimpleFramebuffer(w, h, false);
+        setLinearFiltering(smokeHistoryA);
+        setLinearFiltering(smokeHistoryB);
+        clearSmokeFramebuffer(smokeHistoryA);
+        clearSmokeFramebuffer(smokeHistoryB);
+        mc.getFramebuffer().beginWrite(true);
         width = w;
         height = h;
         configuredBeforeDepthTex = -1;
         configuredAfterDepthTex = -1;
+        smokeHistoryValid = true;
+        smokeCurrentIsA = true;
+        lastSmokeUpdateNanos = 0L;
     }
 
     private void ensureBloomBuffers(int iterations) {
@@ -374,7 +506,7 @@ public class ShaderHandsRenderer implements QClient {
         if (module == null || !module.isEnable()) return false;
         boolean hasGlow = module.glow.get() > EPSILON;
         boolean hasFill = module.fill.get() > EPSILON && module.alpha.get() > EPSILON;
-        return hasGlow || hasFill;
+        return module.smoke.isState() || hasGlow || hasFill;
     }
 
     private void setUniform(ShaderProgram shader, String name, float v) {

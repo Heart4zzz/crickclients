@@ -18,6 +18,7 @@ import fun.crickclient.api.events.implement.EventTickPre;
 import fun.crickclient.api.storages.implement.helpertstorages.enumvar.ModuleClass;
 import fun.crickclient.api.utils.baritone.BaritoneAntiStuck;
 import fun.crickclient.api.utils.player.Counter;
+import fun.crickclient.api.utils.input.PerspectiveInputFix;
 import fun.crickclient.client.modules.impl.render.ShaderEsp;
 
 import java.lang.reflect.InvocationTargetException;
@@ -41,6 +42,7 @@ public abstract class MinecraftClientMixin {
 
     @Inject(method = "tick", at = @At("RETURN"))
     public void tickEnd(CallbackInfo ci) throws InvocationTargetException, IllegalAccessException, InstantiationException {
+        PerspectiveInputFix.applyFallback((MinecraftClient) (Object) this);
         if (EventInvoker.hasListeners(EventTickPost.class)) {
             EventTickPost event = new EventTickPost();
             EventInvoker.invoke(event);

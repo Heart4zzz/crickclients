@@ -5,6 +5,7 @@ import fun.crickclient.api.events.Priority;
 import fun.crickclient.api.events.implement.EventRender;
 import fun.crickclient.api.utils.render.hands.ShaderHandsRenderer;
 import fun.crickclient.client.modules.Module;
+import fun.crickclient.client.modules.settings.implement.BooleanSetting;
 import fun.crickclient.client.modules.settings.implement.FloatSetting;
 import fun.crickclient.client.modules.settings.implement.ModeSetting;
 
@@ -13,6 +14,7 @@ public class ShaderHands extends Module {
     public static ShaderHands INSTANCE = new ShaderHands();
     private static final ShaderHandsRenderer RENDERER = ShaderHandsRenderer.getInstance();
     public final ModeSetting mode = new ModeSetting("Режим", "Свечение", "Свечение", "Красивый");
+    public final BooleanSetting smoke = new BooleanSetting("Дым", true);
 
     public final FloatSetting waveSpeed = new FloatSetting("Скорость волн", 1.2f, 0.1f, 5.0f, 0.1f)
             .visible(() -> mode.is("Красивый"));
@@ -26,11 +28,12 @@ public class ShaderHands extends Module {
 
     public ShaderHands() {
         super("ShaderHands", "Красивый Шейдер на руки и предметы", ModuleCategory.RENDER);
-        addSettings(mode, waveSpeed, waveScale, outline, glow, fill, alpha);
+        addSettings(mode, smoke, waveSpeed, waveScale, outline, glow, fill, alpha);
     }
 
     @Override
     public void onDisable() {
+        RENDERER.resetSmokeHistory();
         RENDERER.invalidateState();
         super.onDisable();
     }
