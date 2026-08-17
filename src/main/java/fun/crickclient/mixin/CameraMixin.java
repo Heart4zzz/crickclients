@@ -10,7 +10,7 @@ import fun.crickclient.CrickClient;
 import fun.crickclient.api.events.EventInvoker;
 import fun.crickclient.api.events.implement.EventRotation;
 import fun.crickclient.api.storages.implement.helpertstorages.enumvar.ModuleClass;
-import fun.crickclient.client.modules.impl.render.InterpolateF5;
+import fun.crickclient.client.modules.impl.render.BetterF5;
 
 import java.lang.reflect.InvocationTargetException;
 
@@ -51,7 +51,7 @@ public abstract class CameraMixin {
          return ((ICameraMixin) instance).setClipToSpace(distance);
       }
 
-      InterpolateF5 module = ModuleClass.INSTANCE != null ? ModuleClass.INSTANCE.interpolateF5 : null;
+      BetterF5 module = ModuleClass.INSTANCE != null ? ModuleClass.INSTANCE.betterF5 : null;
       if (module != null && module.isEnable()) {
          return ((ICameraMixin) instance).setClipToSpace(module.getInterpolatedDistance(tickDelta));
       }
@@ -70,7 +70,7 @@ public abstract class CameraMixin {
       float newY = y;
 
       if (thirdPerson) {
-         InterpolateF5 module = ModuleClass.INSTANCE != null ? ModuleClass.INSTANCE.interpolateF5 : null;
+         BetterF5 module = ModuleClass.INSTANCE != null ? ModuleClass.INSTANCE.betterF5 : null;
          if (module != null && module.isEnable()) {
             newY += module.getInterpolatedHeightOffset(tickDelta);
          }

@@ -63,7 +63,7 @@ public class ModuleClass extends GlobalObject<Module> implements ModuleRewords {
                 hitBubbles,
                 hitMarker,
                 interfaceModule,
-                interpolateF5,
+                betterF5,
                 inventoryWalk,
                 itemAim,
                 itemRelease,

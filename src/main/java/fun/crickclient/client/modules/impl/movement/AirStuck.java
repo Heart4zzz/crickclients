@@ -1,151 +1,115 @@
 package fun.crickclient.client.modules.impl.movement;
 
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 import fun.crickclient.api.events.EventLink;
-import fun.crickclient.api.events.implement.EventMove;
+import fun.crickclient.api.events.implement.EventMoveInput;
 import fun.crickclient.api.events.implement.EventPacket;
-import fun.crickclient.api.utils.network.NetworkUtils;
-import fun.crickclient.api.utils.player.InventoryUtils;
+import fun.crickclient.api.events.implement.EventTickPre;
+import fun.crickclient.api.utils.math.StopWatch;
 import fun.crickclient.client.modules.Module;
 import fun.crickclient.client.modules.settings.implement.BooleanSetting;
 import fun.crickclient.client.modules.settings.implement.ModeSetting;
+
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class AirStuck extends Module {
 
     public static AirStuck INSTANCE = new AirStuck();
 
-    private final ModeSetting mode = new ModeSetting("Мод", "Обычный", "Обычный", "LonyGrief");
-    private final BooleanSetting cancelPackets = new BooleanSetting("Отменять пакеты", true);
-    private final BooleanSetting swapElytra = new BooleanSetting("Свапать элитру", true);
+    private final ModeSetting modeSetting = new ModeSetting("Mode", "Grim", "Grim", "FunTime");
 
-    private Vec3d freezePosition = Vec3d.ZERO;
-    private boolean frozen = false;
+    private final BooleanSetting fallCheck = new BooleanSetting("Fall Check", true);
+
+    private Vec3d savedVelocity = Vec3d.ZERO;
+    private final Queue<Packet<?>> packets = new ConcurrentLinkedQueue<>();
+    private final StopWatch stopWatch = new StopWatch();
 
     public AirStuck() {
-        super("AirStuck", "Зависает в воздухе", ModuleCategory.MOVEMENT);
-        addSettings(mode, cancelPackets, swapElytra);
+        super("AirStuck", "Air Stuck", ModuleCategory.MOVEMENT);
+        addSettings(modeSetting, fallCheck);
+    }
+
+    @EventLink
+    public void onInput(EventMoveInput e) {
+        e.setForward(0);
+        e.setStrafe(0);
+        e.setJump(false);
+        e.setSneak(false);
+    }
+
+    @EventLink
+    public void onPacket(EventPacket e) {
+        if (!isEnable() || mc.player == null) return;
+
+        if (modeSetting.is("FunTime")) {
+            if (e.getType() == EventPacket.Type.SEND) {
+                if (e.getPacket() instanceof PlayerMoveC2SPacket) {
+                    e.cancel();
+                } else {
+                    packets.add(e.getPacket());
+                    e.cancel();
+                }
+            }
+        } else if (modeSetting.is("Grim")) {
+            if (e.getPacket() instanceof PlayerMoveC2SPacket) {
+                e.cancel();
+            }
+        }
+    }
+
+    @EventLink
+    public void onTick(EventTickPre e) {
+        if (mc.player == null) return;
+
+        if (modeSetting.is("FunTime") && stopWatch.isReached(28000)) {
+            mc.player.sendMessage(Text.literal("§c[AirStuck] Автоматически выключен (защита от кика)"), false);
+            setEnabled(false);
+            return;
+        }
+
+        mc.player.setVelocity(0, 0, 0);
+        mc.player.setNoGravity(true);
     }
 
     @Override
     public void onEnable() {
-        frozen = false;
-
-        if (mc.player != null && swapElytra.isState()) {
-            swapChestEquipment();
-        }
-
-        if (mc.player != null && mode.is("Обычный")) {
-            freezePosition = mc.player.getPos();
-            frozen = true;
-        }
-
         super.onEnable();
+        stopWatch.reset();
+        packets.clear();
+        if (mc.player == null || mc.world == null) return;
+
+        if (mc.player.isOnGround() && fallCheck.isState()) {
+            mc.player.sendMessage(Text.literal("Вам нужно находиться в воздухе"), false);
+            setEnabled(false);
+            return;
+        }
+
+        mc.player.setNoGravity(true);
+        savedVelocity = mc.player.getVelocity();
     }
 
     @Override
     public void onDisable() {
-        frozen = false;
         super.onDisable();
-    }
-
-    private void swapChestEquipment() {
-        ItemStack chestStack = mc.player.getEquippedStack(EquipmentSlot.CHEST);
-
-        if (!chestStack.isOf(Items.ELYTRA)) {
-            return;
-        }
-
-        int chestplateSlot = InventoryUtils.findBestChestplateSlot();
-        if (chestplateSlot != -1) {
-            doSwap(chestplateSlot);
-        }
-    }
-
-    private void doSwap(int slot) {
-        if (slot >= 0 && slot < 9) {
-            mc.interactionManager.clickSlot(0, 6, slot, SlotActionType.SWAP, mc.player);
-        } else {
-            mc.interactionManager.clickSlot(0, slot, 0, SlotActionType.SWAP, mc.player);
-            mc.interactionManager.clickSlot(0, 6, 0, SlotActionType.SWAP, mc.player);
-            mc.interactionManager.clickSlot(0, slot, 0, SlotActionType.SWAP, mc.player);
-        }
-
-        mc.player.networkHandler.sendPacket(new CloseHandledScreenC2SPacket(0));
-    }
-
-    @EventLink
-    public void onMove(final EventMove e) {
         if (mc.player == null) return;
+        if (mc.player.isOnGround() && fallCheck.isState()) return;
 
-        if (mode.is("LonyGrief") && !frozen) {
-            if (mc.player.fallDistance > 0.0F && mc.player.getVelocity().y < 0.0D) {
-                freezePosition = mc.player.getPos();
-                frozen = true;
+        if (!packets.isEmpty()) {
+            for (Packet<?> packet : packets) {
+                if (mc.getNetworkHandler() != null) {
+                    mc.getNetworkHandler().sendPacket(packet);
+                }
             }
+            packets.clear();
         }
 
-        if (frozen) {
-            e.setMovePos(Vec3d.ZERO);
-            mc.player.setPosition(freezePosition.x, freezePosition.y, freezePosition.z);
-            mc.player.setVelocity(0, 0, 0);
+        if (savedVelocity != null) {
+            mc.player.setVelocity(savedVelocity);
         }
-    }
-
-    @EventLink
-    public void onPacket(final EventPacket e) {
-        if (!frozen || e.getType() != EventPacket.Type.SEND) return;
-
-        if (e.getPacket() instanceof PlayerMoveC2SPacket packet) {
-            if (cancelPackets.isState()) {
-                e.cancel();
-            } else {
-                e.cancel();
-                NetworkUtils.sendSilentPacket(createFrozenPacket(packet));
-            }
-        }
-    }
-
-    private PlayerMoveC2SPacket createFrozenPacket(PlayerMoveC2SPacket packet) {
-        boolean onGround = packet.isOnGround();
-        boolean horizontalCollision = packet.horizontalCollision();
-
-        if (packet.changesPosition() && packet.changesLook()) {
-            return new PlayerMoveC2SPacket.Full(
-                    freezePosition.x,
-                    freezePosition.y,
-                    freezePosition.z,
-                    packet.getYaw(mc.player.getYaw()),
-                    packet.getPitch(mc.player.getPitch()),
-                    onGround,
-                    horizontalCollision
-            );
-        }
-
-        if (packet.changesPosition()) {
-            return new PlayerMoveC2SPacket.PositionAndOnGround(
-                    freezePosition.x,
-                    freezePosition.y,
-                    freezePosition.z,
-                    onGround,
-                    horizontalCollision
-            );
-        }
-
-        if (packet.changesLook()) {
-            return new PlayerMoveC2SPacket.LookAndOnGround(
-                    packet.getYaw(mc.player.getYaw()),
-                    packet.getPitch(mc.player.getPitch()),
-                    onGround,
-                    horizontalCollision
-            );
-        }
-
-        return new PlayerMoveC2SPacket.OnGroundOnly(onGround, horizontalCollision);
+        mc.player.setNoGravity(false);
     }
 }
