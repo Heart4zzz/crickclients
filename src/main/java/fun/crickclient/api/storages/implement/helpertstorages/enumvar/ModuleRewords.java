@@ -55,7 +55,7 @@ public interface ModuleRewords {
     HelpMessage helpMessage = HelpMessage.INSTANCE;
     HitBubbles hitBubbles = HitBubbles.INSTANCE;
     Interface interfaceModule = Interface.INSTANCE;
-    InterpolateF5 interpolateF5 = InterpolateF5.INSTANCE;
+    BetterF5 betterF5 = BetterF5.INSTANCE;
     InventoryWalk inventoryWalk = InventoryWalk.INSTANCE;
     ItemAim itemAim = ItemAim.INSTANCE;
     ItemScroller itemScroller = ItemScroller.INSTANCE;

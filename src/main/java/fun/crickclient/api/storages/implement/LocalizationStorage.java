@@ -80,7 +80,7 @@ public class LocalizationStorage {
         add("TargetESP", "Target ESP", "ESP цілі");
         add("JumpCircle", "Jump Circle", "Коло стрибка");
         add("CustomWorld", "Custom World", "Світ");
-        add("InterpolateF5", "Interpolate F5", "Плавний F5");
+        add("BetterF5", "Better F5", "Кращий F5");
         add("BlockOverlay", "Block Overlay", "Оверлей блоку");
         add("ShaderHands", "Shader Hands", "Шейдер рук");
         add("Режим", "Mode", "Режим");
