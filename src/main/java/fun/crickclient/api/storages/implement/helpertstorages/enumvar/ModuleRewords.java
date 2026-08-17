@@ -115,4 +115,5 @@ public interface ModuleRewords {
     HitMarker hitMarker = HitMarker.INSTANCE;
     Trails trails = Trails.INSTANCE;
     Trajectories trajectories = Trajectories.INSTANCE;
+    Katana katana = Katana.INSTANCE;
 }
