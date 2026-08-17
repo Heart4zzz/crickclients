@@ -110,7 +110,6 @@ public class ThemeEditor implements QClient {
         hoverAnim.run(hover);
         float hv = hoverAnim.getValue();
 
-        int accent = ColorProvider.getColorClient();
         int a = (int) (255 * shellVisibility);
 
         DrawUtil.drawRoundBlur(tabX, tabY + 2f, COLLAPSED_W, TAB_H, TAB_RADIUS,
@@ -123,20 +122,19 @@ public class ThemeEditor implements QClient {
         DrawUtil.drawRoundOutline(tabX, tabY, COLLAPSED_W, TAB_H, TAB_RADIUS, 1f,
                 ColorProvider.rgba(255, 255, 255, (int) ((16 + 18 * hv) * shellVisibility)));
 
-        // Две «пилюли» цвета текущей темы — визуальная метафора палитры.
+        // Кружок цвета текущей темы.
         float dotW = COLLAPSED_W - 13f;
         float dotX = tabX + 6.5f;
+        float dotY = tabY + 13f;
         int currentColor = ColorProvider.setAlpha(displayColor(CrickClient.INSTANCE.themeStorage.getThemes()), a);
 
-        DrawUtil.drawRoundBlur(dotX, tabY + 11f, dotW, dotW, dotW / 2f,
-                ColorProvider.setAlpha(accent, (int) (90 * shellVisibility)), 5f);
-        DrawUtil.drawRound(dotX, tabY + 11f, dotW, dotW, dotW / 2f, currentColor);
-        DrawUtil.drawRound(dotX, tabY + 11f + dotW + 3f, dotW, dotW, dotW / 2f,
-                ColorProvider.setAlpha(accent, (int) (90 * shellVisibility)));
+        DrawUtil.drawRound(dotX, dotY, dotW, dotW, dotW / 2f, currentColor);
+        DrawUtil.drawRoundOutline(dotX, dotY, dotW, dotW, dotW / 2f, 0.8f,
+                ColorProvider.rgba(255, 255, 255, (int) (36 * shellVisibility)));
 
         // Стрелка направления — по центру нижней части кнопки.
         DrawUtil.drawTextCentered(GuiFonts.GUI_BODY.get(), expanded ? "<" : ">",
-                tabX, tabY + TAB_H - 14f, COLLAPSED_W, 12f,
+                tabX, tabY + TAB_H - 22f, COLLAPSED_W, 12f,
                 ColorProvider.setAlpha(ColorProvider.getColorInactiveText(),
                         (int) ((190 + 65 * hv) * shellVisibility)), 6.5f);
     }

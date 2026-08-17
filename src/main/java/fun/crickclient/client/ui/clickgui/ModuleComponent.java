@@ -185,13 +185,10 @@ public class ModuleComponent extends Component {
         float intersectBottom = Math.min(y + currentHeight, panelBottom);
         float intersectHeight = Math.max(0, intersectBottom - intersectY);
 
-        // Разделитель между шапкой и настройками: акцент в центре, гаснет к краям.
+        // Тонкий нейтральный разделитель между шапкой и настройками.
         float sepAlpha = alpha * animation.getValue();
-        int sepMid = ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (70 * sepAlpha));
-        int sepEdge = ColorProvider.setAlpha(ColorProvider.getColorClient(), 0);
-        DrawUtil.drawRound(x + 8f, y + headerH, (width - 16f) / 2f, 0.8f, 0.4f, sepEdge, sepMid, sepEdge, sepMid);
-        DrawUtil.drawRound(x + 8f + (width - 16f) / 2f, y + headerH, (width - 16f) / 2f, 0.8f, 0.4f,
-                sepMid, sepEdge, sepMid, sepEdge);
+        DrawUtil.drawRound(x + 8f, y + headerH, width - 16f, 0.8f, 0.4f,
+                ColorProvider.rgba(255, 255, 255, (int) (14 * sepAlpha)));
 
         for (Component component : components) {
             component.getAlphaAnim().setValue(Math.min(panel.getAnimationAlpha().getValue(), 1) * animation.getValue());

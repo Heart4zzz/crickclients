@@ -63,8 +63,6 @@ public final class ClickGuiStyles {
             new Vector4f(SHELL_RADIUS, 0f, 0f, SHELL_RADIUS);
 
     public static void drawShellWindow(float x, float y, float w, float h, float alpha) {
-        int a255 = (int) (255 * alpha);
-
         // Тень: два слоя — плотное ядро под окном и широкий мягкий ореол.
         DrawUtil.drawRoundBlur(x + 1f, y + 5f, w - 2f, h, SHELL_RADIUS + 4f,
                 ColorProvider.rgba(0, 0, 0, (int) (110 * alpha)), 26f);
@@ -73,30 +71,20 @@ public final class ClickGuiStyles {
 
         // Корпус окна.
         DrawUtil.drawRound(x, y, w, h, SHELL_CORNERS,
-                ColorProvider.setAlpha(BG_TOP, (int) (250 * alpha)),
-                ColorProvider.setAlpha(BG_TOP, (int) (250 * alpha)),
-                ColorProvider.setAlpha(BG_BOTTOM, (int) (250 * alpha)),
-                ColorProvider.setAlpha(BG_BOTTOM, (int) (250 * alpha)));
+                ColorProvider.setAlpha(BG_TOP, (int) (252 * alpha)),
+                ColorProvider.setAlpha(BG_TOP, (int) (252 * alpha)),
+                ColorProvider.setAlpha(BG_BOTTOM, (int) (252 * alpha)),
+                ColorProvider.setAlpha(BG_BOTTOM, (int) (252 * alpha)));
 
-        // Тонкая светлая обводка: сверху ярче, снизу гаснет — эффект стеклянной кромки.
+        // Тонкая светлая обводка по периметру — аккуратно подчёркивает скруглённый край.
         DrawUtil.drawRoundOutline(x, y, w, h, SHELL_RADIUS, 1f,
-                ColorProvider.rgba(255, 255, 255, (int) (26 * alpha)),
-                ColorProvider.rgba(255, 255, 255, (int) (7 * alpha)));
+                ColorProvider.rgba(255, 255, 255, (int) (20 * alpha)),
+                ColorProvider.rgba(255, 255, 255, (int) (8 * alpha)));
 
-        // Акцентный блик по верхней кромке.
-        DrawUtil.drawRound(x + SHELL_RADIUS + 6f, y + 0.6f, w - (SHELL_RADIUS + 6f) * 2f, 0.8f, 0.4f,
-                ColorProvider.rgba(0, 0, 0, 0),
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (95 * alpha)),
-                ColorProvider.rgba(0, 0, 0, 0),
-                ColorProvider.rgba(0, 0, 0, 0));
-
-        // Разделитель между сайдбаром и контентом: гаснет к краям.
+        // Разделитель между сайдбаром и контентом.
         float sepX = x + SIDEBAR_WIDTH;
-        DrawUtil.drawRound(sepX, y + 8f, 0.8f, h - 16f, 0.4f,
-                ColorProvider.rgba(255, 255, 255, 0),
-                ColorProvider.rgba(255, 255, 255, 0),
-                ColorProvider.rgba(255, 255, 255, (int) (16 * alpha)),
-                ColorProvider.rgba(255, 255, 255, (int) (16 * alpha)));
+        DrawUtil.drawRound(sepX, y + 10f, 0.8f, h - 20f, 0.4f,
+                ColorProvider.rgba(255, 255, 255, (int) (13 * alpha)));
     }
 
     /** Фон боковой панели с собственным градиентом и скруглением только слева. */
@@ -106,13 +94,6 @@ public final class ClickGuiStyles {
                 ColorProvider.setAlpha(SIDEBAR_TOP, (int) (255 * alpha)),
                 ColorProvider.setAlpha(SIDEBAR_BOTTOM, (int) (255 * alpha)),
                 ColorProvider.setAlpha(SIDEBAR_BOTTOM, (int) (255 * alpha)));
-
-        // Едва заметный акцентный отсвет у верхнего края сайдбара.
-        DrawUtil.drawRound(x, y, w, 46f, SIDEBAR_CORNERS,
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (14 * alpha)),
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (8 * alpha)),
-                ColorProvider.rgba(0, 0, 0, 0),
-                ColorProvider.rgba(0, 0, 0, 0));
     }
 
     /** Пилюля выбранного пункта сайдбара. {@code selected} — прогресс анимации выбора (0..1). */
@@ -120,27 +101,20 @@ public final class ClickGuiStyles {
                                                  float alpha, float selected, float hover) {
         int accent = ColorProvider.getColorClient();
 
-        if (hover > 0.01f) {
-            DrawUtil.drawRound(x, y, w, h, 6f,
-                    ColorProvider.rgba(255, 255, 255, (int) (11 * hover * alpha * (1f - selected * 0.5f))));
+        // Лёгкая светлая подложка при наведении (гаснет, когда пункт выбран).
+        int hoverA = (int) (12 * hover * alpha * (1f - selected * 0.6f));
+        if (hoverA > 0) {
+            DrawUtil.drawRound(x, y, w, h, 6f, ColorProvider.rgba(255, 255, 255, hoverA));
         }
 
         if (selected > 0.01f) {
-            // Заливка акцентом слева направо — мягкий «свет» от активного индикатора.
+            // Ровная полупрозрачная заливка акцентом + индикатор у левого края.
             DrawUtil.drawRound(x, y, w, h, 6f,
-                    ColorProvider.setAlpha(accent, (int) (46 * selected * alpha)),
-                    ColorProvider.setAlpha(accent, (int) (14 * selected * alpha)),
-                    ColorProvider.setAlpha(accent, (int) (40 * selected * alpha)),
-                    ColorProvider.setAlpha(accent, (int) (10 * selected * alpha)));
-            DrawUtil.drawRoundOutline(x, y, w, h, 6f, 1f,
-                    ColorProvider.setAlpha(accent, (int) (60 * selected * alpha)));
+                    ColorProvider.setAlpha(accent, (int) (30 * selected * alpha)));
 
-            // Индикатор-палочка у левого края.
-            float barH = h * 0.52f;
+            float barH = h * 0.5f;
             float barY = y + (h - barH) / 2f;
-            DrawUtil.drawRoundBlur(x + 1f, barY, 2.4f, barH, 1.2f,
-                    ColorProvider.setAlpha(accent, (int) (120 * selected * alpha)), 6f);
-            DrawUtil.drawRound(x + 1f, barY, 2.4f, barH, 1.2f,
+            DrawUtil.drawRound(x + 1.5f, barY, 2.2f, barH, 1.1f,
                     ColorProvider.setAlpha(accent, (int) (255 * selected * alpha)));
         }
     }
@@ -157,13 +131,25 @@ public final class ClickGuiStyles {
                 ColorProvider.setAlpha(color, (int) (255 * alpha)), size);
     }
 
-    public static void drawScrollFade(float x, float y, float w, float h, float headerH, float alpha) {
-        int top = ColorProvider.setAlpha(BG_TOP, (int) (215 * alpha));
-        int bottom = ColorProvider.setAlpha(BG_BOTTOM, (int) (225 * alpha));
-        int clear = ColorProvider.setAlpha(BG_TOP, 0);
-
-        DrawUtil.drawRound(x, y - 1f, w, 11f, 0f, top, top, clear, clear);
-        DrawUtil.drawRound(x, y + h - 13f, w, 14f, 0f, clear, clear, bottom, bottom);
+    /**
+     * Мягкое затухание списка у верхней и нижней кромки.
+     *
+     * @param topFade    сила верхнего фейда (0..1) — 0, когда список в самом верху,
+     *                   чтобы не затемнять первый ряд карточек
+     * @param bottomFade сила нижнего фейда (0..1)
+     */
+    public static void drawScrollFade(float x, float y, float w, float h,
+                                      float alpha, float topFade, float bottomFade) {
+        if (topFade > 0.02f) {
+            int top = ColorProvider.setAlpha(BG_TOP, (int) (235 * alpha * topFade));
+            int clear = ColorProvider.setAlpha(BG_TOP, 0);
+            DrawUtil.drawRound(x, y - 1f, w, 10f, 0f, top, top, clear, clear);
+        }
+        if (bottomFade > 0.02f) {
+            int bottom = ColorProvider.setAlpha(BG_BOTTOM, (int) (235 * alpha * bottomFade));
+            int clear = ColorProvider.setAlpha(BG_BOTTOM, 0);
+            DrawUtil.drawRound(x, y + h - 9f, w, 10f, 0f, clear, clear, bottom, bottom);
+        }
     }
 
     public static void drawScrollbar(float trackX, float trackY, float trackH, float thumbY, float thumbH, float alpha) {
@@ -214,10 +200,6 @@ public final class ClickGuiStyles {
         int outlineOn = ColorProvider.setAlpha(accent, (int) ((70 + 40 * hover) * alpha));
         DrawUtil.drawRoundOutline(x, y, w, h, MODULE_RADIUS, 1f,
                 ColorProvider.interpolateColor(outlineOff, outlineOn, enabled));
-
-        // Верхний блик — стеклянная кромка карточки.
-        DrawUtil.drawRound(x + 5f, y + 0.7f, w - 10f, 0.7f, 0.35f,
-                ColorProvider.rgba(255, 255, 255, (int) (22 * alpha)));
 
         // Подложка под раскрытым блоком настроек.
         if (open && h > headerH + 2f) {

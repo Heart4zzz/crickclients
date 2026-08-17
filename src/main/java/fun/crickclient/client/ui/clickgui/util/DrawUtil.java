@@ -24,9 +24,26 @@ public final class DrawUtil {
         return MATRICES;
     }
 
+    // ===================== Защита от «нулевой» альфы =====================
+    //
+    // Шейдерные методы RenderUtils трактуют альфу 0 как 255 (полностью непрозрачный
+    // цвет). Клик гуи постоянно анимирует альфу до нуля, поэтому без защиты элементы
+    // на последних кадрах анимации вспыхивали сплошным белым/чёрным. Здесь полностью
+    // прозрачные цвета либо не рисуются вовсе, либо (в градиентах, где прозрачным
+    // должен быть только один угол) заменяются на почти невидимую альфу 1.
+
+    private static boolean invisible(int color) {
+        return (color >>> 24) == 0;
+    }
+
+    private static int safe(int color) {
+        return invisible(color) ? (color & 0xFFFFFF) | 0x01000000 : color;
+    }
+
     // ===================== Прямоугольники =====================
 
     public static void drawRound(float x, float y, float width, float height, float radius, int color) {
+        if (invisible(color)) return;
         RenderUtils.drawRoundedRect(MATRICES, x, y, width, height, radius, color);
     }
 
@@ -36,8 +53,9 @@ public final class DrawUtil {
 
     public static void drawRound(float x, float y, float width, float height, float radius,
                                  int color, int color2, int color3, int color4) {
+        if (invisible(color) && invisible(color2) && invisible(color3) && invisible(color4)) return;
         RenderUtils.drawGradientRect(MATRICES, x, y, width, height, radius, radius, radius, radius,
-                color, color2, color4, color3);
+                safe(color), safe(color2), safe(color4), safe(color3));
     }
 
     public static void drawRound(float x, float y, float width, float height, float radius, float smoothness, int color) {
@@ -55,6 +73,7 @@ public final class DrawUtil {
     }
 
     public static void drawRound(float x, float y, float width, float height, Vector4f radius, int color) {
+        if (invisible(color)) return;
         RenderUtils.drawRoundedRect(MATRICES, x, y, width, height, radius.x, radius.y, radius.z, radius.w, color);
     }
 
@@ -64,8 +83,9 @@ public final class DrawUtil {
 
     public static void drawRound(float x, float y, float width, float height, Vector4f radius,
                                  int color, int color2, int color3, int color4) {
+        if (invisible(color) && invisible(color2) && invisible(color3) && invisible(color4)) return;
         RenderUtils.drawGradientRect(MATRICES, x, y, width, height, radius.x, radius.y, radius.z, radius.w,
-                color, color2, color4, color3);
+                safe(color), safe(color2), safe(color4), safe(color3));
     }
 
     public static void drawRound(float x, float y, float width, float height, Vector4f radius, float smoothness, int color) {
@@ -76,16 +96,20 @@ public final class DrawUtil {
 
     public static void drawRoundBlur(float x, float y, float width, float height, float radius, int color,
                                      float blurIntensivity) {
+        if (invisible(color)) return;
         RenderUtils.drawShadow(MATRICES, x, y, width, height, radius, Math.max(1f, blurIntensivity), color);
     }
 
     public static void drawRoundBlur(float x, float y, float width, float height, float radius, int color, int color2,
                                      float blurIntensivity) {
-        RenderUtils.drawShadow(MATRICES, x, y, width, height, radius, Math.max(1f, blurIntensivity), color, color2);
+        if (invisible(color) && invisible(color2)) return;
+        RenderUtils.drawShadow(MATRICES, x, y, width, height, radius, Math.max(1f, blurIntensivity),
+                safe(color), safe(color2));
     }
 
     public static void drawRoundBlur(float x, float y, float width, float height, Vector4f radius, int color,
                                      float blurIntensivity) {
+        if (invisible(color)) return;
         RenderUtils.drawShadow(MATRICES, x, y, width, height, Math.max(radius.x, radius.y),
                 Math.max(1f, blurIntensivity), color);
     }
@@ -94,30 +118,35 @@ public final class DrawUtil {
 
     public static void drawRoundOutline(float x, float y, float width, float height, float radius,
                                         float thickness, int color) {
+        if (invisible(color)) return;
         RenderUtils.drawRoundedRectOutline(MATRICES, x, y, width, height, radius, radius, radius, radius,
                 thickness, color);
     }
 
     public static void drawRoundOutline(float x, float y, float width, float height, Vector4f radius,
                                         float thickness, int color) {
+        if (invisible(color)) return;
         RenderUtils.drawRoundedRectOutline(MATRICES, x, y, width, height, radius.x, radius.y, radius.z, radius.w,
                 thickness, color);
     }
 
     public static void drawRoundOutline(float x, float y, float width, float height, float radius,
                                         float thickness, int topColor, int bottomColor) {
+        if (invisible(topColor) && invisible(bottomColor)) return;
         RenderUtils.drawRoundedRectOutline(MATRICES, x, y, width, height, radius, radius, radius, radius,
-                thickness, topColor, topColor, bottomColor, bottomColor);
+                thickness, safe(topColor), safe(topColor), safe(bottomColor), safe(bottomColor));
     }
 
     // ===================== Круги =====================
 
     public static void drawCircle(float centerX, float centerY, float radius, int color) {
+        if (invisible(color)) return;
         RenderUtils.drawRoundedRect(MATRICES, centerX - radius, centerY - radius, radius * 2f, radius * 2f, radius, color);
     }
 
     public static void drawRingArc(float centerX, float centerY, float radius, float thickness,
                                    float startDeg, float endDeg, int color) {
+        if (invisible(color)) return;
         RenderUtils.drawRingArc(MATRICES, centerX - radius, centerY - radius, radius * 2f, thickness,
                 startDeg, endDeg, color);
     }
@@ -125,6 +154,7 @@ public final class DrawUtil {
     // ===================== Текст =====================
 
     public static void drawText(MsdfFont font, String text, float x, float y, int color, float size) {
+        if (invisible(color)) return;
         Font sized = GuiFonts.sized(font, size);
         if (sized == null || text == null) return;
         sized.drawStringNoOffset(MATRICES, text, x, y + 2f, color);
@@ -132,6 +162,7 @@ public final class DrawUtil {
 
     public static void drawText(MsdfFont font, String text, float x, float y, int color, float size,
                                 float fadeoutStart, float fadeoutEnd, float maxWidth) {
+        if (invisible(color)) return;
         Font sized = GuiFonts.sized(font, size);
         if (sized == null || text == null) return;
         if (maxWidth > 0f && sized.getStringWidth(text) > maxWidth) {

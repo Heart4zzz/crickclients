@@ -163,7 +163,14 @@ public class Panel implements QClient {
             ClickGuiStyles.drawScrollbar(contentX + contentW - 4f, trackY, trackH, thumbY, thumbH, alphaRatio);
         }
 
-        ClickGuiStyles.drawScrollFade(contentX, contentY, contentW, contentH, 0f, alphaRatio);
+        // Верхний фейд включается только когда список реально прокручен вниз,
+        // иначе он «обрезал» верхний ряд карточек. Нижний — пока есть куда листать.
+        float scrolled = -scrollAnim.getValue();
+        float topFade = MathHelper.clamp(scrolled / 14f, 0f, 1f);
+        float bottomFade = maxScroll > 0.5f
+                ? MathHelper.clamp((maxScroll - scrolled) / 14f, 0f, 1f)
+                : 0f;
+        ClickGuiStyles.drawScrollFade(contentX, contentY, contentW, contentH, alphaRatio, topFade, bottomFade);
     }
 
     public void renderComponents(DrawContext context, int mouseX, int mouseY, float partialTicks, List<ModuleComponent> components) {

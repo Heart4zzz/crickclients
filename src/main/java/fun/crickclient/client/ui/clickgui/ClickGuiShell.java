@@ -166,17 +166,15 @@ public class ClickGuiShell implements QClient {
         String username = mc.getSession().getUsername();
         String user = username == null ? "" : username;
 
-        // Свечение и подложка под головой — голова может не успеть загрузиться.
-        DrawUtil.drawRoundBlur(avatarX, avatarY + 1f, avatarSize, avatarSize, 6f,
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (60 * alpha)), 6f);
-        DrawUtil.drawRound(avatarX, avatarY, avatarSize, avatarSize, 6f,
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (55 * alpha)));
+        // Нейтральная подложка под головой — на случай, если скин ещё не загрузился.
+        DrawUtil.drawRound(avatarX, avatarY, avatarSize, avatarSize, 5f,
+                ColorProvider.rgba(255, 255, 255, (int) (14 * alpha)));
 
         if (!user.isEmpty()) {
-            DrawUtil.drawPlayerHead(user, avatarX, avatarY, avatarSize, 6f, alpha);
+            DrawUtil.drawPlayerHead(user, avatarX, avatarY, avatarSize, 5f, alpha);
         }
-        DrawUtil.drawRoundOutline(avatarX, avatarY, avatarSize, avatarSize, 6f, 1f,
-                ColorProvider.rgba(255, 255, 255, (int) (32 * alpha)));
+        DrawUtil.drawRoundOutline(avatarX, avatarY, avatarSize, avatarSize, 5f, 1f,
+                ColorProvider.rgba(255, 255, 255, (int) (22 * alpha)));
 
         // Ник ужимаем по реальной ширине текста, а не по количеству символов, —
         // иначе длинные ники обрезались раньше времени и упирались в край панели.
@@ -188,7 +186,7 @@ public class ClickGuiShell implements QClient {
                 6.8f, 0.4f, 1f, textMaxW);
 
         DrawUtil.drawText(GuiFonts.GUI_BODY.get(), "CrickClient", textX, avatarY + 11f,
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (185 * alpha)),
+                ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (200 * alpha)),
                 5.4f, 0.4f, 1f, textMaxW);
     }
 
@@ -243,18 +241,8 @@ public class ClickGuiShell implements QClient {
             subtitle = sectionTitleFor(selectedCategory) + " / " + title;
         }
 
-        // Акцентная точка слева от заголовка — маленькая деталь, которая связывает
-        // заголовок с выбранным пунктом сайдбара.
-        float dotSize = 3f;
-        float dotY = drawY + 11.5f;
-        DrawUtil.drawRoundBlur(contentX, dotY, dotSize, dotSize, dotSize / 2f,
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (140 * alpha)), 4f);
-        DrawUtil.drawRound(contentX, dotY, dotSize, dotSize, dotSize / 2f,
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (255 * alpha)));
-
-        float textX = contentX + dotSize + 5f;
-        ClickGuiStyles.drawGuiTitle(title, textX, drawY + 7f, alpha, 9f);
-        ClickGuiStyles.drawGuiBody(subtitle, textX, drawY + 18.5f, alpha * 0.6f, 5.5f);
+        ClickGuiStyles.drawGuiTitle(title, contentX, drawY + 7f, alpha, 9f);
+        ClickGuiStyles.drawGuiBody(subtitle, contentX, drawY + 18.5f, alpha * 0.6f, 5.5f);
     }
 
     private static String sectionTitleFor(Module.ModuleCategory category) {
