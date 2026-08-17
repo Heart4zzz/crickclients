@@ -90,6 +90,26 @@ public final class DrawUtil {
                 Math.max(1f, blurIntensivity), color);
     }
 
+    // ===================== Обводка =====================
+
+    public static void drawRoundOutline(float x, float y, float width, float height, float radius,
+                                        float thickness, int color) {
+        RenderUtils.drawRoundedRectOutline(MATRICES, x, y, width, height, radius, radius, radius, radius,
+                thickness, color);
+    }
+
+    public static void drawRoundOutline(float x, float y, float width, float height, Vector4f radius,
+                                        float thickness, int color) {
+        RenderUtils.drawRoundedRectOutline(MATRICES, x, y, width, height, radius.x, radius.y, radius.z, radius.w,
+                thickness, color);
+    }
+
+    public static void drawRoundOutline(float x, float y, float width, float height, float radius,
+                                        float thickness, int topColor, int bottomColor) {
+        RenderUtils.drawRoundedRectOutline(MATRICES, x, y, width, height, radius, radius, radius, radius,
+                thickness, topColor, topColor, bottomColor, bottomColor);
+    }
+
     // ===================== Круги =====================
 
     public static void drawCircle(float centerX, float centerY, float radius, int color) {
@@ -123,5 +143,56 @@ public final class DrawUtil {
 
     public static float width(MsdfFont font, String text, float size) {
         return font == null || text == null ? 0f : font.getWidth(text, size);
+    }
+
+    // ===================== Центрирование текста =====================
+
+    /**
+     * Смещение от координаты Y, переданной в {@link #drawText}, до оптической середины строки,
+     * в долях размера шрифта.
+     * <p>
+     * Базовая линия msdf-шрифта находится на {@code y + 2 + baselineHeight * size}. У текстового
+     * атласа (suisse) высота заглавной буквы — {@code 0.805em}, значит середина капители лежит на
+     * {@code y + 2 + (0.963 - 0.805 / 2) * size}. У шрифта иконок глифы отцентрованы относительно
+     * {@code 0.4375em} над базовой линией, т.е. середина — {@code y + 2 + 0.5 * size}.
+     */
+    private static final float TEXT_CENTER_RATIO = 0.5607f;
+    private static final float ICON_CENTER_RATIO = 0.5f;
+    /** Константа {@code +2f}, которую {@link #drawText} добавляет к Y перед отрисовкой. */
+    private static final float TEXT_BASE_OFFSET = 2f;
+
+    private static float centerRatio(MsdfFont font) {
+        return GuiFonts.ICONS_ATLAS.equals(GuiFonts.nameOf(font)) ? ICON_CENTER_RATIO : TEXT_CENTER_RATIO;
+    }
+
+    /** Y для {@link #drawText}, при котором строка окажется по центру бокса по вертикали. */
+    public static float centeredTextY(MsdfFont font, float boxY, float boxH, float size) {
+        return boxY + boxH / 2f - centerRatio(font) * size - TEXT_BASE_OFFSET;
+    }
+
+    /** Рисует текст, отцентрованный по вертикали внутри бокса. */
+    public static void drawTextVCentered(MsdfFont font, String text, float x, float boxY, float boxH,
+                                         int color, float size) {
+        drawText(font, text, x, centeredTextY(font, boxY, boxH, size), color, size);
+    }
+
+    /** Рисует текст, отцентрованный и по горизонтали, и по вертикали внутри бокса. */
+    public static void drawTextCentered(MsdfFont font, String text, float boxX, float boxY,
+                                        float boxW, float boxH, int color, float size) {
+        float tw = width(font, text, size);
+        drawText(font, text, boxX + (boxW - tw) / 2f, centeredTextY(font, boxY, boxH, size), color, size);
+    }
+
+    /** Рисует текст по правому краю бокса с вертикальным центрированием. */
+    public static void drawTextRight(MsdfFont font, String text, float rightX, float boxY, float boxH,
+                                     int color, float size) {
+        drawText(font, text, rightX - width(font, text, size),
+                centeredTextY(font, boxY, boxH, size), color, size);
+    }
+
+    // ===================== Голова игрока =====================
+
+    public static void drawPlayerHead(String username, float x, float y, float size, float radius, float alpha) {
+        RenderUtils.drawPlayerHead(MATRICES, username, x, y, size, radius, alpha, 0f);
     }
 }

@@ -103,8 +103,7 @@ public class ConfigPanel implements QClient {
             String message = configs.isEmpty()
                     ? "Create your first config above"
                     : "No configs match your search";
-            float msgW = GuiFonts.GUI_BODY.get().getWidth(message, 6.5f);
-            DrawUtil.drawText(GuiFonts.GUI_BODY.get(), message, x + (w - msgW) / 2f, listY + listH / 2f - 8f,
+            DrawUtil.drawTextCentered(GuiFonts.GUI_BODY.get(), message, x, listY, w, listH,
                     ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (170 * alpha)), 6.5f);
             maxScroll = 0f;
             return;
@@ -138,24 +137,34 @@ public class ConfigPanel implements QClient {
         boolean hover = HoverUtil.isHovered(mouseX, mouseY, cx, cy, cardW, cardH);
         if (hover) CursorManager.requestHand();
 
-        int bg = ColorProvider.rgba(22, 24, 32, (int) (240 * alpha));
+        int top = hover ? ColorProvider.lighten(ClickGuiStyles.CARD_TOP, 0.06f) : ClickGuiStyles.CARD_TOP;
+        int bottom = hover ? ColorProvider.lighten(ClickGuiStyles.CARD_BOTTOM, 0.05f) : ClickGuiStyles.CARD_BOTTOM;
+        int a = (int) (245 * alpha);
+
         if (hover) {
-            bg = ColorProvider.interpolateColor(bg, ColorProvider.rgba(30, 32, 42, (int) (240 * alpha)), 0.5f);
+            DrawUtil.drawRoundBlur(cx + 1f, cy + 2f, cardW - 2f, cardH, ClickGuiStyles.MODULE_RADIUS,
+                    ColorProvider.rgba(0, 0, 0, (int) (55 * alpha)), 10f);
         }
+        DrawUtil.drawRound(cx, cy, cardW, cardH, ClickGuiStyles.MODULE_RADIUS,
+                ColorProvider.setAlpha(top, a), ColorProvider.setAlpha(top, a),
+                ColorProvider.setAlpha(bottom, a), ColorProvider.setAlpha(bottom, a));
+        DrawUtil.drawRoundOutline(cx, cy, cardW, cardH, ClickGuiStyles.MODULE_RADIUS, 1f,
+                ColorProvider.rgba(255, 255, 255, (int) ((12 + 12 * (hover ? 1 : 0)) * alpha)));
+        DrawUtil.drawRound(cx + 5f, cy + 0.7f, cardW - 10f, 0.7f, 0.35f,
+                ColorProvider.rgba(255, 255, 255, (int) (20 * alpha)));
 
-        DrawUtil.drawRound(cx, cy, cardW, cardH, 6f, bg);
-
-        DrawUtil.drawText(GuiFonts.GUI_TITLE.get(), name, cx + 8f, cy + 6f,
-                ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha)), 6.8f);
-        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), "Click Load to apply", cx + 8f, cy + 15f,
+        DrawUtil.drawText(GuiFonts.GUI_TITLE.get(), name, cx + 9f, cy + 6f,
+                ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha)), 6.8f,
+                0.4f, 1f, cardW - 18f);
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), "Click Load to apply", cx + 9f, cy + 15f,
                 ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (150 * alpha)), 5.2f);
 
         float loadW = 36f;
         float delW = 36f;
         float btnH = 10f;
         float btnY = cy + cardH - 13f;
-        float loadX = cx + 8f;
-        float delX = cx + cardW - delW - 8f;
+        float loadX = cx + 9f;
+        float delX = cx + cardW - delW - 9f;
 
         renderMiniButton(loadX, btnY, loadW, btnH, "Load", false, mouseX, mouseY, alpha);
         renderMiniButton(delX, btnY, delW, btnH, "Del", true, mouseX, mouseY, alpha);
@@ -166,9 +175,11 @@ public class ConfigPanel implements QClient {
         boolean hover = HoverUtil.isHovered(mouseX, mouseY, bx, by, bw, bh);
         if (hover) CursorManager.requestHand();
         int bg = accent
-                ? ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) ((hover ? 55 : 35) * alpha))
-                : ColorProvider.rgba(255, 255, 255, (int) ((hover ? 14 : 8) * alpha));
-        DrawUtil.drawRound(bx, by, bw, bh, 4f, bg);
+                ? ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) ((hover ? 70 : 48) * alpha))
+                : ColorProvider.rgba(255, 255, 255, (int) ((hover ? 16 : 9) * alpha));
+        DrawUtil.drawRound(bx, by, bw, bh, 5f, bg);
+        DrawUtil.drawRoundOutline(bx, by, bw, bh, 5f, 0.9f,
+                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) ((hover ? 130 : 80) * alpha)));
         ClickGuiStyles.drawCenteredButtonText(label, bx, by, bw, bh, alpha, 6.5f, ColorProvider.getColorText());
     }
 
@@ -177,9 +188,12 @@ public class ConfigPanel implements QClient {
         boolean hover = HoverUtil.isHovered(mouseX, mouseY, bx, by, bw, bh);
         if (hover) CursorManager.requestHand();
         int bg = danger
-                ? ColorProvider.rgba(255, 80, 80, (int) ((hover ? 35 : 20) * alpha))
-                : ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) ((hover ? 45 : 28) * alpha));
-        DrawUtil.drawRound(bx, by, bw, bh, 3f, bg);
+                ? ColorProvider.rgba(255, 80, 80, (int) ((hover ? 45 : 24) * alpha))
+                : ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) ((hover ? 60 : 34) * alpha));
+        DrawUtil.drawRound(bx, by, bw, bh, 3.5f, bg);
+        DrawUtil.drawRoundOutline(bx, by, bw, bh, 3.5f, 0.8f, danger
+                ? ColorProvider.rgba(255, 120, 120, (int) ((hover ? 110 : 55) * alpha))
+                : ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) ((hover ? 120 : 60) * alpha)));
         int textColor = danger
                 ? ColorProvider.rgba(255, 180, 180, (int) (230 * alpha))
                 : ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (230 * alpha));

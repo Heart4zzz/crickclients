@@ -17,9 +17,11 @@ public class TextComponent extends Component {
     private final TextSetting setting;
     private boolean focused;
 
-    private static final float SETTING_HEIGHT = 26f;
-    private static final float FIELD_H = 12f;
+    private static final float SETTING_HEIGHT = 28f;
+    private static final float FIELD_H = 13f;
     private static final float PADDING = 4.5f;
+    private static final float LABEL_H = 11f;
+    private static final float RADIUS = 4f;
 
     public TextComponent(TextSetting setting) {
         this.setting = setting;
@@ -34,29 +36,34 @@ public class TextComponent extends Component {
         if (alpha < 0.02f) return;
 
         float fieldX = x + PADDING;
-        float fieldY = y + 11f;
+        float fieldY = y + LABEL_H + 1f;
         float fieldW = width - PADDING * 2f;
 
         if (HoverUtil.isHovered(mouseX, mouseY, fieldX, fieldY, fieldW, FIELD_H)) {
             CursorManager.requestIBeam();
         }
 
-        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), setting.displayName(), fieldX, y + 1.5f,
-                ColorProvider.setAlpha(ColorProvider.getColorText(), alphaInt), 7.5f);
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), setting.displayName(), fieldX + 1f,
+                DrawUtil.centeredTextY(GuiFonts.GUI_BODY.get(), y, LABEL_H, 6.6f),
+                ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (240 * alpha)), 6.6f);
 
-        DrawUtil.drawRound(fieldX, fieldY, fieldW, FIELD_H, 3f,
-                ColorProvider.setAlpha(focused ? ColorProvider.getColorInactiveField() : ColorProvider.getColorField(),
-                        (int) (220 * alpha)));
+        DrawUtil.drawRound(fieldX, fieldY, fieldW, FIELD_H, RADIUS,
+                ColorProvider.rgba(0, 0, 0, (int) (70 * alpha)));
+        DrawUtil.drawRoundOutline(fieldX, fieldY, fieldW, FIELD_H, RADIUS, 0.9f,
+                focused
+                        ? ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (150 * alpha))
+                        : ColorProvider.rgba(255, 255, 255, (int) (16 * alpha)));
 
         String text = setting.get() == null ? "" : setting.get();
         String shown = focused && (System.currentTimeMillis() / 500) % 2 == 0 ? text + "|" : text;
 
         Scissor.push();
         Scissor.setFromComponentCoordinates(fieldX + 1f, fieldY, fieldW - 2f, FIELD_H);
-        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), shown, fieldX + 3.5f, fieldY + 2f,
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), shown, fieldX + 4.5f,
+                DrawUtil.centeredTextY(GuiFonts.GUI_BODY.get(), fieldY, FIELD_H, 6.4f),
                 ColorProvider.setAlpha(text.isEmpty()
                         ? ColorProvider.getColorInactiveText()
-                        : ColorProvider.getColorText(), alphaInt), 7f);
+                        : ColorProvider.getColorText(), alphaInt), 6.4f);
         Scissor.unset();
         Scissor.pop();
 
@@ -66,7 +73,7 @@ public class TextComponent extends Component {
     @Override
     public void mouseClicked(double mouseX, double mouseY, int button) {
         float fieldX = x + PADDING;
-        float fieldY = y + 11f;
+        float fieldY = y + LABEL_H + 1f;
         float fieldW = width - PADDING * 2f;
         focused = button == 0 && HoverUtil.isHovered(mouseX, mouseY, fieldX, fieldY, fieldW, FIELD_H);
     }

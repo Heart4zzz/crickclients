@@ -151,13 +151,32 @@ public final class ColorProvider {
         return interpolateColor(color1, color2, angle / 360.0f * colors.length - colorIndex);
     }
 
+    /**
+     * Смешивает два цвета: при {@code amount = 0} возвращает {@code from},
+     * при {@code amount = 1} — {@code to}.
+     */
     public static int interpolateColor(int from, int to, float amount) {
         amount = Math.min(1.0f, Math.max(0.0f, amount));
-        int r = interpolate(red(to), red(from), amount);
-        int g = interpolate(green(to), green(from), amount);
-        int b = interpolate(blue(to), blue(from), amount);
-        int a = interpolate(alpha(to), alpha(from), amount);
+        int r = interpolate(red(from), red(to), amount);
+        int g = interpolate(green(from), green(to), amount);
+        int b = interpolate(blue(from), blue(to), amount);
+        int a = interpolate(alpha(from), alpha(to), amount);
         return a << 24 | r << 16 | g << 8 | b;
+    }
+
+    /** Осветляет цвет в сторону белого на {@code amount} (0..1). */
+    public static int lighten(int color, float amount) {
+        return interpolateColor(color, rgba(255, 255, 255, alpha(color)), amount);
+    }
+
+    /** Затемняет цвет в сторону чёрного на {@code amount} (0..1). */
+    public static int darken(int color, float amount) {
+        return interpolateColor(color, rgba(0, 0, 0, alpha(color)), amount);
+    }
+
+    /** Умножает альфу цвета на множитель (0..1). */
+    public static int mulAlpha(int color, float factor) {
+        return setAlpha(color, (int) (alpha(color) * Math.max(0f, Math.min(1f, factor))));
     }
 
     private static int interpolate(int oldValue, int newValue, float amount) {

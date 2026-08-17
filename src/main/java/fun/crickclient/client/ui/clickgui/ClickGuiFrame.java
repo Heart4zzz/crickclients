@@ -62,6 +62,13 @@ public class ClickGuiFrame extends Screen implements QClient {
         mouseX = (int) ((mouseX - centerX) / guiScale + centerX);
         mouseY = (int) ((mouseY - centerY) / guiScale + centerY);
 
+        shell.getOpenAnim().run(!closing);
+        float open = MathHelper.clamp(shell.getOpenAnim().getValue(), 0f, 1f);
+
+        // Затемнение фона рисуется ДО масштабирования — иначе при масштабе < 1 оно
+        // покрывает только часть экрана и по краям остаётся не затемнённая рамка.
+        ClickGuiStyles.drawBackdrop(windowWidth, windowHeight, open);
+
         Scissor.setGuiTransform(guiScale, centerX, centerY);
 
         Matrix4fStack modelView = RenderSystem.getModelViewStack();
@@ -73,9 +80,6 @@ public class ClickGuiFrame extends Screen implements QClient {
         float shiftX = themeEditor.getShellShiftX();
         float shiftY = themeEditor.getShellShiftY();
         shell.layout(windowWidth, windowHeight, shiftX, shiftY);
-        shell.getOpenAnim().run(!closing);
-        float open = MathHelper.clamp(shell.getOpenAnim().getValue(), 0f, 1f);
-        ClickGuiStyles.drawBackdrop(windowWidth, windowHeight, Math.max(open, 0.35f));
         shell.render(context, mouseX, mouseY, delta, open);
 
         themeEditor.setAnchor(shell.getAnchorRight(), shell.getAnchorY(), shell.getAnchorHeight());

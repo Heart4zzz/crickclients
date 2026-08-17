@@ -17,6 +17,7 @@ import fun.crickclient.client.ui.clickgui.util.DrawUtil;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +26,8 @@ public class ClickGuiShell implements QClient {
     private static final float ROW_H = 19f;
     private static final float SECTION_GAP = 3f;
     private static final float HEADER_H = 10f;
+    /** Высота блока профиля (аватар + ник) в шапке сайдбара. */
+    private static final float PROFILE_BLOCK_H = 38f;
     /** Глиф иконки вкладки «Configs» в шрифте иконок. */
     private static final String CONFIG_ICON = "J";
 
@@ -56,6 +59,9 @@ public class ClickGuiShell implements QClient {
     private final ConfigPanel configPanel = new ConfigPanel();
     private final Animation openAnim = new Animation(Easing.QUINTIC_OUT, 360);
     private final Animation categoryAnim = new Animation(Easing.QUINTIC_OUT, 240);
+    /** Анимации подсветки пунктов сайдбара, по ключу пункта. */
+    private final Map<String, Animation> itemSelectAnims = new HashMap<>();
+    private final Map<String, Animation> itemHoverAnims = new HashMap<>();
 
     private Module.ModuleCategory selectedCategory = Module.ModuleCategory.COMBAT;
     private Module.ModuleCategory displayedCategory = Module.ModuleCategory.COMBAT;
@@ -120,104 +126,135 @@ public class ClickGuiShell implements QClient {
         float sy = drawY;
         float sw = ClickGuiStyles.SIDEBAR_WIDTH;
 
-        DrawUtil.drawRound(sx, sy, sw, height, ClickGuiStyles.SIDEBAR_CORNERS,
-                ColorProvider.rgba(12, 14, 20, (int) (255 * alpha)));
+        ClickGuiStyles.drawSidebarBackground(sx, sy, sw, height, alpha);
+        renderProfile(sx, sy, sw, alpha);
 
-        float profileY = sy + 10f;
-        float avatarSize = 18f;
-        float avatarX = sx + 10f;
-        float textBlockH = 15f;
-        float avatarY = profileY + (textBlockH - avatarSize) / 2f + 0.5f;
+        DrawUtil.drawRound(sx + 10f, sy + PROFILE_BLOCK_H, sw - 20f, 0.8f, 0.4f,
+                ColorProvider.rgba(255, 255, 255, (int) (12 * alpha)));
 
-        String username = mc.getSession().getUsername();
-        String initial = username == null || username.isEmpty()
-                ? "?"
-                : String.valueOf(Character.toUpperCase(username.charAt(0)));
-
-        DrawUtil.drawRound(avatarX, avatarY, avatarSize, avatarSize, avatarSize / 2f,
-                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (70 * alpha)));
-        ClickGuiStyles.drawCenteredGuiTitle(initial, avatarX, avatarY, avatarSize, avatarSize, alpha, 7.5f);
-
-        String user = username == null ? "" : username;
-        if (user.length() > 9) user = user.substring(0, 8) + "…";
-        ClickGuiStyles.drawGuiBody(user, sx + 32f, profileY + 1f, alpha, 6.5f);
-        ClickGuiStyles.drawGuiBody("CrickClient", sx + 32f, profileY + 9.5f, alpha * 0.7f, 5.5f);
-
-        DrawUtil.drawRound(sx + 8f, sy + 34f, sw - 16f, 0.5f, 0.25f,
-                ColorProvider.rgba(255, 255, 255, (int) (10 * alpha)));
-
-        float itemY = sy + 42f;
+        float itemY = sy + PROFILE_BLOCK_H + 8f;
         for (SidebarSection section : MODULE_SECTIONS) {
-            renderSectionHeader(sx, sw, itemY, section.title(), alpha);
+            renderSectionHeader(sx, itemY, section.title(), alpha);
             itemY += HEADER_H;
             for (SidebarEntry entry : section.entries()) {
                 boolean selected = !configView && entry.category() == selectedCategory;
-                renderSidebarItem(sx, sw, itemY, entry.icon(), entry.label(), selected,
-                        hover(mouseX, mouseY, sx, itemY, sw), alpha);
+                renderSidebarItem(sx, sw, itemY, entry.icon(), entry.label(), entry.category().name(),
+                        selected, hover(mouseX, mouseY, sx, itemY, sw), alpha);
                 itemY += ROW_H;
             }
             itemY += SECTION_GAP;
         }
 
         itemY += 2f;
-        DrawUtil.drawRound(sx + 8f, itemY, sw - 16f, 0.5f, 0.25f,
-                ColorProvider.rgba(255, 255, 255, (int) (8 * alpha)));
+        DrawUtil.drawRound(sx + 10f, itemY, sw - 20f, 0.8f, 0.4f,
+                ColorProvider.rgba(255, 255, 255, (int) (10 * alpha)));
         itemY += 6f;
 
-        renderSectionHeader(sx, sw, itemY, "Settings", alpha);
+        renderSectionHeader(sx, itemY, "Settings", alpha);
         itemY += HEADER_H;
         configsItemY = itemY;
-        renderSidebarItem(sx, sw, itemY, CONFIG_ICON, "Configs", configView,
+        renderSidebarItem(sx, sw, itemY, CONFIG_ICON, "Configs", "CONFIGS", configView,
                 hover(mouseX, mouseY, sx, itemY, sw), alpha);
     }
 
-    private void renderSectionHeader(float sx, float sw, float y, String title, float alpha) {
-        ClickGuiStyles.drawGuiBody(title, sx + 12f, y + 1f, alpha * 0.45f, 5f);
+    /** Шапка сайдбара: голова игрока, ник и название клиента. */
+    private void renderProfile(float sx, float sy, float sw, float alpha) {
+        float avatarSize = 20f;
+        float avatarX = sx + 11f;
+        float avatarY = sy + 11f;
+
+        String username = mc.getSession().getUsername();
+        String user = username == null ? "" : username;
+
+        // Свечение и подложка под головой — голова может не успеть загрузиться.
+        DrawUtil.drawRoundBlur(avatarX, avatarY + 1f, avatarSize, avatarSize, 6f,
+                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (60 * alpha)), 6f);
+        DrawUtil.drawRound(avatarX, avatarY, avatarSize, avatarSize, 6f,
+                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (55 * alpha)));
+
+        if (!user.isEmpty()) {
+            DrawUtil.drawPlayerHead(user, avatarX, avatarY, avatarSize, 6f, alpha);
+        }
+        DrawUtil.drawRoundOutline(avatarX, avatarY, avatarSize, avatarSize, 6f, 1f,
+                ColorProvider.rgba(255, 255, 255, (int) (32 * alpha)));
+
+        // Ник ужимаем по реальной ширине текста, а не по количеству символов, —
+        // иначе длинные ники обрезались раньше времени и упирались в край панели.
+        float textX = avatarX + avatarSize + 7f;
+        float textMaxW = sx + sw - 10f - textX;
+        DrawUtil.drawText(GuiFonts.GUI_TITLE.get(), user.isEmpty() ? "Player" : user,
+                textX, avatarY + 1.5f,
+                ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha)),
+                6.8f, 0.4f, 1f, textMaxW);
+
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), "CrickClient", textX, avatarY + 11f,
+                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (185 * alpha)),
+                5.4f, 0.4f, 1f, textMaxW);
     }
 
-    private void renderSidebarItem(float sx, float sw, float itemY, String icon, String label, boolean selected, boolean hover, float alpha) {
+    private void renderSectionHeader(float sx, float y, String title, float alpha) {
+        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), title.toUpperCase(java.util.Locale.ROOT), sx + 13f, y + 2f,
+                ColorProvider.rgba(255, 255, 255, (int) (60 * alpha)), 4.8f);
+    }
+
+    private void renderSidebarItem(float sx, float sw, float itemY, String icon, String label, String key,
+                                   boolean selected, boolean hover, float alpha) {
         if (hover) CursorManager.requestHand();
-        if (selected) {
-            DrawUtil.drawRound(sx + 6f, itemY, sw - 12f, ROW_H, 5f, ColorProvider.rgba(255, 255, 255, (int) (10 * alpha)));
-            DrawUtil.drawRound(sx + 6f, itemY, 2f, ROW_H, 1f, ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (230 * alpha)));
-        } else if (hover) {
-            DrawUtil.drawRound(sx + 6f, itemY, sw - 12f, ROW_H, 5f, ColorProvider.rgba(255, 255, 255, (int) (5 * alpha)));
-        }
+
+        Animation selectAnim = itemSelectAnims.computeIfAbsent(key, k -> new Animation(Easing.QUINTIC_OUT, 260));
+        Animation hoverAnim = itemHoverAnims.computeIfAbsent(key, k -> new Animation(Easing.QUINTIC_OUT, 180));
+        float sel = MathHelper.clamp(selectAnim.run(selected ? 1f : 0f), 0f, 1f);
+        float hov = MathHelper.clamp(hoverAnim.run(hover ? 1f : 0f), 0f, 1f);
+
+        float itemX = sx + 7f;
+        float itemW = sw - 14f;
+        ClickGuiStyles.drawSidebarItemBackground(itemX, itemY, itemW, ROW_H, alpha, sel, hov);
 
         float iconSize = 8f;
-        float textSize = 6.5f;
-        float iconY = itemY + (ROW_H - iconSize) / 2f + 1f;
-        float textY = itemY + (ROW_H - textSize) / 2f + 0.5f;
+        // Иконка и подпись сдвигаются вправо при выборе — маленький живой отклик.
+        float shift = sel * 1.5f;
+        float iconX = itemX + 7f + shift;
 
-        int iconColor = selected
-                ? ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (255 * alpha))
-                : ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) (160 * alpha));
-        DrawUtil.drawText(GuiFonts.ICONS_MINCED.get(), icon, sx + 12f, iconY, iconColor, iconSize);
+        int iconIdle = ColorProvider.setAlpha(ColorProvider.getColorIcons(), (int) ((150 + 50 * hov) * alpha));
+        int iconSel = ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (255 * alpha));
+        DrawUtil.drawTextVCentered(GuiFonts.ICONS_MINCED.get(), icon, iconX, itemY, ROW_H,
+                ColorProvider.interpolateColor(iconIdle, iconSel, sel), iconSize);
 
-        int textColor = selected
-                ? ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha))
-                : ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) (200 * alpha));
-        DrawUtil.drawText(GuiFonts.GUI_BODY.get(), label, sx + 24f, textY, textColor, textSize);
+        int textIdle = ColorProvider.setAlpha(ColorProvider.getColorInactiveText(), (int) ((195 + 40 * hov) * alpha));
+        int textSel = ColorProvider.setAlpha(ColorProvider.getColorText(), (int) (255 * alpha));
+        DrawUtil.drawTextVCentered(GuiFonts.GUI_BODY.get(), label, iconX + iconSize + 5f, itemY, ROW_H,
+                ColorProvider.interpolateColor(textIdle, textSel, sel), 6.5f);
     }
 
     private boolean hover(int mouseX, int mouseY, float sx, float itemY, float sw) {
-        return HoverUtil.isHovered(mouseX, mouseY, sx + 6f, itemY, sw - 12f, ROW_H);
+        return HoverUtil.isHovered(mouseX, mouseY, sx + 7f, itemY, sw - 14f, ROW_H);
     }
 
     private void renderContentHeader(float drawY, float alpha) {
         String title = configView ? "Configs"
                 : (searchField.isEmpty() ? formatCategory(selectedCategory) : "Search");
-        ClickGuiStyles.drawGuiTitle(title, contentX, drawY + 8f, alpha, 9f);
 
+        String subtitle;
         if (configView) {
-            String subtitle = configPanel.getStatusText();
-            ClickGuiStyles.drawGuiBody(subtitle, contentX, drawY + 18f, alpha * 0.65f, 5.5f);
+            subtitle = configPanel.getStatusText();
         } else if (!searchField.isEmpty()) {
-            ClickGuiStyles.drawGuiBody("Filtered modules", contentX, drawY + 18f, alpha * 0.65f, 5.5f);
+            subtitle = "Filtered modules";
         } else {
-            String section = sectionTitleFor(selectedCategory);
-            ClickGuiStyles.drawGuiBody(section + " / " + title, contentX, drawY + 18f, alpha * 0.65f, 5.5f);
+            subtitle = sectionTitleFor(selectedCategory) + " / " + title;
         }
+
+        // Акцентная точка слева от заголовка — маленькая деталь, которая связывает
+        // заголовок с выбранным пунктом сайдбара.
+        float dotSize = 3f;
+        float dotY = drawY + 11.5f;
+        DrawUtil.drawRoundBlur(contentX, dotY, dotSize, dotSize, dotSize / 2f,
+                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (140 * alpha)), 4f);
+        DrawUtil.drawRound(contentX, dotY, dotSize, dotSize, dotSize / 2f,
+                ColorProvider.setAlpha(ColorProvider.getColorClient(), (int) (255 * alpha)));
+
+        float textX = contentX + dotSize + 5f;
+        ClickGuiStyles.drawGuiTitle(title, textX, drawY + 7f, alpha, 9f);
+        ClickGuiStyles.drawGuiBody(subtitle, textX, drawY + 18.5f, alpha * 0.6f, 5.5f);
     }
 
     private static String sectionTitleFor(Module.ModuleCategory category) {
@@ -299,12 +336,12 @@ public class ClickGuiShell implements QClient {
         if (button != 0) return false;
         float sx = x;
         float sw = ClickGuiStyles.SIDEBAR_WIDTH;
-        float itemY = drawY + 42f;
+        float itemY = drawY + PROFILE_BLOCK_H + 8f;
 
         for (SidebarSection section : MODULE_SECTIONS) {
             itemY += HEADER_H;
             for (SidebarEntry entry : section.entries()) {
-                if (HoverUtil.isHovered(mouseX, mouseY, sx + 6f, itemY, sw - 12f, ROW_H)) {
+                if (HoverUtil.isHovered(mouseX, mouseY, sx + 7f, itemY, sw - 14f, ROW_H)) {
                     if (configView) configPanel.onClose();
                     configView = false;
                     if (selectedCategory != entry.category()) {
@@ -318,7 +355,7 @@ public class ClickGuiShell implements QClient {
             itemY += SECTION_GAP;
         }
 
-        if (HoverUtil.isHovered(mouseX, mouseY, sx + 6f, configsItemY, sw - 12f, ROW_H)) {
+        if (HoverUtil.isHovered(mouseX, mouseY, sx + 7f, configsItemY, sw - 14f, ROW_H)) {
             if (!configView) configPanel.onOpen();
             configView = true;
             return true;
