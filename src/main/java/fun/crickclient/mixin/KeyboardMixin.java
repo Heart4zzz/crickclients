@@ -10,11 +10,13 @@ import org.lwjgl.glfw.GLFW;
 import fun.crickclient.api.QClient;
 import fun.crickclient.api.events.implement.EventChunkReload;
 import fun.crickclient.api.utils.input.KeyBoardUtils;
+import fun.crickclient.api.utils.input.PerspectiveInputFix;
 
 @Mixin(Keyboard.class)
 public class KeyboardMixin implements QClient {
     @Inject(method = "onKey", at = @At("HEAD"))
-    public  void onKey(long window, int key, int scancode, int action, int modifiers, CallbackInfo ci) {
+    public void onKey(long window, int key, int scancode, int action, int modifiers, CallbackInfo ci) {
+        PerspectiveInputFix.recordKeyPress(mc, key, scancode, action);
         if (mc.currentScreen == null) KeyBoardUtils.call(key, action);
     }
 

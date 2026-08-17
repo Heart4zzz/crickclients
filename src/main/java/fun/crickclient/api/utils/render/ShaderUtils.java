@@ -30,6 +30,8 @@ public class ShaderUtils implements QClient {
     public final ShaderProgramKey shaderHandsMaskDiff = register("hands", "hands_mask_diff", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey shaderHandsOverlay = register("hands", "hands_overlay", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey shaderHandsGlow = register("hands", "hands_glow", VertexFormats.POSITION_TEXTURE_COLOR);
+    public final ShaderProgramKey shaderHandsSmokeUpdate = register("hands", "hands_smoke_update", VertexFormats.POSITION_TEXTURE_COLOR);
+    public final ShaderProgramKey shaderHandsSmokeComposite = register("hands", "hands_smoke_composite", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey shaderHandsKawaseDown = register("hands", "hands_kawase_down", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey shaderHandsKawaseUp = register("hands", "hands_kawase_up", VertexFormats.POSITION_TEXTURE_COLOR);
     public final ShaderProgramKey shaderEspGlow = register("shaderesp", "glow", VertexFormats.POSITION_TEXTURE_COLOR);
