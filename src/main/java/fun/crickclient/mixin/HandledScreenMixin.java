@@ -12,6 +12,8 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import fun.crickclient.api.events.EventInvoker;
+import fun.crickclient.api.events.implement.EventClickSlot;
 import fun.crickclient.client.modules.impl.player.ItemScroller;
 
 @Mixin(HandledScreen.class)
@@ -23,6 +25,16 @@ public abstract class HandledScreenMixin {
 
     @Shadow
     protected abstract void onMouseClick(@Nullable Slot slot, int slotId, int button, SlotActionType actionType);
+
+    @Inject(method = "onMouseClick", at = @At("HEAD"), cancellable = true)
+    private void crickclient$onClickSlot(@Nullable Slot slot, int slotId, int button, SlotActionType actionType, CallbackInfo ci) {
+        try {
+            EventClickSlot event = new EventClickSlot(slotId, button, actionType);
+            EventInvoker.invoke(event);
+            if (event.isCancelled()) ci.cancel();
+        } catch (Exception ignored) {
+        }
+    }
 
     @Inject(method = "render", at = @At("HEAD"))
     private void onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
