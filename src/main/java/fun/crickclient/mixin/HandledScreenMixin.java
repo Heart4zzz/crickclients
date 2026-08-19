@@ -26,7 +26,11 @@ public abstract class HandledScreenMixin {
     @Shadow
     protected abstract void onMouseClick(@Nullable Slot slot, int slotId, int button, SlotActionType actionType);
 
-    @Inject(method = "onMouseClick", at = @At("HEAD"), cancellable = true)
+    @Inject(
+            method = "onMouseClick(Lnet/minecraft/screen/slot/Slot;IILnet/minecraft/screen/slot/SlotActionType;)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
     private void crickclient$onClickSlot(@Nullable Slot slot, int slotId, int button, SlotActionType actionType, CallbackInfo ci) {
         try {
             EventClickSlot event = new EventClickSlot(slotId, button, actionType);
