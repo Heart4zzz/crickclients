@@ -1,7 +1,5 @@
 package fun.crickclient.api.storages.implement;
 
-import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.util.math.MathHelper;
 import fun.crickclient.api.QClient;
 import fun.crickclient.api.events.EventInvoker;
@@ -15,10 +13,31 @@ public class FreeLookStorage implements QClient {
         EventInvoker.register(this);
     }
 
-    @Setter private static boolean active;
-    @Getter @Setter private static float freeYaw, freePitch;
+    private static boolean active;
+    private static float freeYaw, freePitch;
+
     public static boolean isActive() {
         return active;
+    }
+
+    public static void setActive(boolean value) {
+        active = value;
+    }
+
+    public static float getFreeYaw() {
+        return freeYaw;
+    }
+
+    public static float getFreePitch() {
+        return freePitch;
+    }
+
+    public static void setFreeYaw(float value) {
+        freeYaw = value;
+    }
+
+    public static void setFreePitch(float value) {
+        freePitch = value;
     }
 
     @EventLink

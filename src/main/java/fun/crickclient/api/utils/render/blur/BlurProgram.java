@@ -2,7 +2,6 @@ package fun.crickclient.api.utils.render.blur;
 
 import com.mojang.blaze3d.systems.ProjectionType;
 import com.mojang.blaze3d.systems.RenderSystem;
-import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.GlUniform;
@@ -28,10 +27,16 @@ public class BlurProgram implements QClient {
 
     private static BlurProgram instance;
 
-    @Getter
     private static Framebuffer buffer1;
-    @Getter
     private static Framebuffer buffer2;
+
+    public static Framebuffer getBuffer1() {
+        return buffer1;
+    }
+
+    public static Framebuffer getBuffer2() {
+        return buffer2;
+    }
 
     private int lastWidth = -1;
     private int lastHeight = -1;

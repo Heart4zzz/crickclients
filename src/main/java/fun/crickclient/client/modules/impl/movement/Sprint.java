@@ -1,7 +1,5 @@
 package fun.crickclient.client.modules.impl.movement;
 
-import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import fun.crickclient.api.events.EventLink;
@@ -23,12 +21,24 @@ public class Sprint extends Module {
         addSettings(keepInWater);
     }
 
-    @Getter
-    @Setter
     private static boolean sprinting;
-    @Getter
-    @Setter
     private static long time = 0;
+
+    public static boolean isSprinting() {
+        return sprinting;
+    }
+
+    public static void setSprinting(boolean value) {
+        sprinting = value;
+    }
+
+    public static long getTime() {
+        return time;
+    }
+
+    public static void setTime(long value) {
+        time = value;
+    }
     private static int pauseDepth = 0;
     private static boolean restoreAfterPause = false;
     private ClientPlayerEntity lastPlayer;
