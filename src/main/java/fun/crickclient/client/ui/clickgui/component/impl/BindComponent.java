@@ -1,5 +1,6 @@
 package fun.crickclient.client.ui.clickgui.component.impl;
 
+import fun.crickclient.api.storages.implement.ConfigStorage;
 import fun.crickclient.api.utils.input.KeyBoardUtils;
 import fun.crickclient.client.modules.settings.implement.BindSetting;
 import fun.crickclient.client.ui.clickgui.component.Component;
@@ -109,6 +110,7 @@ public class BindComponent extends Component {
         if (binding) {
             if (button != 0) setting.setKey(KeyBoardUtils.createMouseBind(button));
             binding = false;
+            ConfigStorage.saveCurrent();
         } else if (button == 0
                 && HoverUtil.isHovered(mouseX, mouseY, bindX(), bindY(), bindBoxWidth(), BIND_H)) {
             binding = true;
@@ -124,6 +126,7 @@ public class BindComponent extends Component {
                 setting.setKey(keyCode);
             }
             binding = false;
+            ConfigStorage.saveCurrent();
         }
     }
 

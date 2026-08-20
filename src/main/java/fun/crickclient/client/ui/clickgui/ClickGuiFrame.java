@@ -2,6 +2,7 @@ package fun.crickclient.client.ui.clickgui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import fun.crickclient.api.QClient;
+import fun.crickclient.api.storages.implement.ConfigStorage;
 import fun.crickclient.client.modules.impl.render.ClickGui;
 import fun.crickclient.client.ui.clickgui.component.SearchField;
 import fun.crickclient.client.ui.clickgui.util.CursorManager;
@@ -227,6 +228,9 @@ public class ClickGuiFrame extends Screen implements QClient {
             cursorsCreated = false;
             currentCursor = 0L;
         }
+        // Сохраняем конфиг при закрытии клик-гуи: все бинды (включая кнопку свапа
+        // в AutoSwap) и настройки сразу пишутся на диск и не сбрасываются.
+        ConfigStorage.saveCurrent();
     }
 
     @Override

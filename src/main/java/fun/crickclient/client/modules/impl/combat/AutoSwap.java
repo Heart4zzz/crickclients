@@ -33,6 +33,7 @@ import fun.crickclient.api.events.implement.EventClickSlot;
 import fun.crickclient.api.events.implement.EventMoveInput;
 import fun.crickclient.api.events.implement.EventRender;
 import fun.crickclient.api.events.implement.EventTickPre;
+import fun.crickclient.api.storages.implement.ConfigStorage;
 import fun.crickclient.api.utils.color.ColorUtils;
 import fun.crickclient.api.utils.input.KeyBoardUtils;
 import fun.crickclient.api.utils.notification.NotificationManager;
@@ -274,6 +275,9 @@ public class AutoSwap extends Module {
         List<TextSetting> settings = getWheelSettings();
         if (index < 0 || index >= settings.size()) return;
         settings.get(index).setText(value);
+        // Слоты колеса сразу пишем в конфиг, чтобы настройки не терялись
+        // при перезаходе на сервер/перезапуске игры.
+        ConfigStorage.saveCurrent();
     }
 
     private ItemStack getStackForIndex(int index) {

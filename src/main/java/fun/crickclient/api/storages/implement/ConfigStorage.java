@@ -40,11 +40,31 @@ public class ConfigStorage {
 
     
     private void saveAll() {
+        // Каждый файл сохраняется отдельно: если глобалы упадут (например, из-за
+        // недоступного поля), конфиг с биндами всё равно будет записан.
         try {
             saveGlobals();
+        } catch (Exception e) {
+            e.printStackTrace(System.err);
+        }
+        try {
             saveConfig(currentConfig);
         } catch (Exception e) {
             e.printStackTrace(System.err);
+        }
+    }
+
+    /**
+     * Мгновенно сохраняет текущий конфиг. Вызывается при изменении биндов в клик-гуи,
+     * чтобы настройки (кнопка свапа в AutoSwap и т.п.) не терялись при перезаходе
+     * на сервер, аварийном закрытии игры или перезагрузке конфига.
+     */
+    public static void saveCurrent() {
+        try {
+            if (CrickClient.INSTANCE != null && CrickClient.INSTANCE.configStorage != null) {
+                CrickClient.INSTANCE.configStorage.saveConfig(CrickClient.INSTANCE.configStorage.currentConfig);
+            }
+        } catch (Exception ignored) {
         }
     }
 

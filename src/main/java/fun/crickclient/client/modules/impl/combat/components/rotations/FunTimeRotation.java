@@ -1,379 +1,251 @@
 package fun.crickclient.client.modules.impl.combat.components.rotations;
 
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
+
 import fun.crickclient.api.QClient;
+import fun.crickclient.api.storages.implement.FreeLookStorage;
 import fun.crickclient.api.storages.implement.RotationStorage;
 import fun.crickclient.api.utils.rotate.Rotation;
 import fun.crickclient.client.modules.impl.combat.Aura;
 import fun.crickclient.client.modules.impl.combat.components.RotationsSystem;
 
-import java.util.Random;
+import java.util.Arrays;
 
+/**
+ * Ротация «ФанТайм ФОВ» — полный перенос из референс-клиента 1:1.
+ *
+ * <p>Что перенесено (методы {@code w()} и {@code a()} референсной киллуары):
+ * <ul>
+ *     <li>точка прицела по мультипоинту {@code AuraUtil.a(eye, target, reach, true)}
+ *         (ФанТайм всегда наводится сквозь стены);</li>
+ *     <li>история питчей {@code u[]} с задержкой {@code 10 - b} тиков;</li>
+ *     <li>синусоидальное покачивание {@code smoothW/smoothH};</li>
+ *     <li>плавный поворот {@code AuraUtil.a(start, end, amount)} с GCD-патчем;</li>
+ *     <li>окно жёсткой наводки при готовности удара ({@code c[3]}, {@code c[8]});</li>
+ *     <li>заморозка yaw первые 4 тика после удара ({@code b <= 4 && c[2] % 2 == 0});</li>
+ *     <li>случайный дополнительный удар (часть обхода ач);</li>
+ *     <li><b>ФОВ-питч</b>: питч остаётся на реальном взгляде игрока
+ *         ({@code Look.c()} = {@code FreeLookStorage.getFreePitch()}), наводится только yaw.</li>
+ * </ul>
+ *
+ * <p>Обход ач сохранён: задержка реакции, покачивание, GCD-квантование и «живой» питч
+ * игрока — сервер видит человеческие повороты, а не мгновенный снап в цель.
+ */
 public class FunTimeRotation extends RotationsSystem implements QClient {
 
+    /** Тайки с последнего удара (аналог {@code b} в референсе). */
+    private int ticksSinceAttack;
+
+    /** Массив состояний киллуары (аналог {@code c[]} в референсе). */
+    private final float[] state = new float[12];
+
+    /** История питчей по тикам (аналог {@code u[]} в референсе). */
+    private final float[] pitchHistory = new float[30];
+
+    /** Флаг случайного дополнительного удара (аналог {@code f} в референсе). */
+    private boolean extraAttackToggle;
+
+    /** Тики, которые цель стоит на месте (замена {@code ServerUtil.a.a(target)}). */
+    private int targetIdleTicks;
+    private Vec3d lastTargetPos;
+
     private LivingEntity trackedTarget;
+    private int lastAdvanceTick = -1;
+    private boolean initialized;
 
-    private float currentYaw;
-    private float currentPitch;
-
-    private float velocityYaw;
-    private float velocityPitch;
-
-    private double aimPointX;
-    private double aimPointY;
-    private double aimPointZ;
-
-    private float noiseWalkYaw = 0.0F;
-    private float noiseWalkPitch = 0.0F;
-
-    private int hitPhase;
-    private int hitTimer;
-    private float pitchBeforeHit;
-
-    private long firstSeenTime;
-    private int reactionMs;
-    private boolean reactionComplete;
-
-    private float lastSentYaw;
-    private float lastSentPitch;
-
-    private float smoothYaw;
-    private float smoothPitch;
-
-    private final Random rand = new Random();
+    /** Последние посчитанные углы (отправляются каждый апдейт, состояние — раз в тик). */
+    private float outYaw;
+    private float outPitch;
 
     public void reset() {
-        this.trackedTarget = null;
-        this.velocityYaw = this.velocityPitch = 0.0F;
-        this.aimPointX = this.aimPointY = this.aimPointZ = 0.0;
-        this.noiseWalkYaw = this.noiseWalkPitch = 0.0F;
-        this.hitPhase = this.hitTimer = 0;
-        this.firstSeenTime = 0L;
-        this.reactionComplete = false;
-        this.reactionMs = 0;
-
-        if (mc.player != null) {
-            this.currentYaw = mc.player.getYaw();
-            this.currentPitch = mc.player.getPitch();
-            this.lastSentYaw = this.currentYaw;
-            this.lastSentPitch = this.currentPitch;
-            this.smoothYaw = this.currentYaw;
-            this.smoothPitch = this.currentPitch;
-        } else {
-            this.currentYaw = this.currentPitch = 0.0F;
-            this.lastSentYaw = this.lastSentPitch = 0.0F;
-            this.smoothYaw = this.smoothPitch = 0.0F;
-        }
+        ticksSinceAttack = 0;
+        extraAttackToggle = false;
+        targetIdleTicks = 0;
+        lastTargetPos = null;
+        // Точное начальное состояние c[] из референса (инициализатор + onEnable):
+        // {-1,-1,-1,-1,0,-1,-1,-1,-1,-1,-1,-1}, затем c[8]=2 (окно наводки), c[9]=random(9..13)
+        Arrays.fill(state, -1.0f);
+        state[4] = 0.0f;
+        state[8] = 2.0f;
+        state[9] = randInt(9, 13);
+        Arrays.fill(pitchHistory, mc.player != null ? mc.player.getPitch() : 0.0f);
+        trackedTarget = null;
+        lastAdvanceTick = -1;
+        initialized = false;
+        outYaw = mc.player != null ? mc.player.getYaw() : 0.0f;
+        outPitch = mc.player != null ? mc.player.getPitch() : 0.0f;
     }
 
-    private float calcGcd() {
-        double s = mc.options.getMouseSensitivity().getValue() * 0.6 + 0.2;
-        return (float) (s * s * s * 1.2);
-    }
-
-    private void pickAimPoint(LivingEntity e) {
-        Box bb = e.getBoundingBox();
-        double w = bb.maxX - bb.minX;
-        double h = bb.maxY - bb.minY;
-        double d = bb.maxZ - bb.minZ;
-
-        this.aimPointX = MathHelper.clamp(rand.nextGaussian() * 0.15, -0.5, 0.5) * w * 0.4;
-        this.aimPointY = MathHelper.clamp(rand.nextGaussian() * 0.15, -0.5, 0.5) * h * 0.4;
-        this.aimPointZ = MathHelper.clamp(rand.nextGaussian() * 0.15, -0.5, 0.5) * d * 0.4;
-    }
-
+    /** Вызывается после каждого удара ауры. */
     public void onAttack() {
-        this.hitPhase = 1;
-        this.hitTimer = 0;
-        this.pitchBeforeHit = this.currentPitch;
-    }
-
-    private float measureAngle(LivingEntity e) {
-        if (mc.player == null) return 0.0F;
-
-        Vec3d eyes = mc.player.getEyePos();
-        Vec3d mid = e.getBoundingBox().getCenter();
-        Vec3d delta = mid.subtract(eyes);
-
-        float needYaw = (float) Math.toDegrees(Math.atan2(delta.z, delta.x)) - 90.0F;
-        float needPitch = (float) (-Math.toDegrees(Math.atan2(delta.y, delta.horizontalLength())));
-
-        float dYaw = Math.abs(MathHelper.wrapDegrees(needYaw - mc.player.getYaw()));
-        float dPitch = Math.abs(needPitch - mc.player.getPitch());
-
-        return dYaw + dPitch;
-    }
-
-    private int computeReaction(float angle) {
-        int baseDelay = angle > 130.0F ? 140 : (angle > 70.0F ? 90 : (angle > 30.0F ? 45 : 12));
-        int variance = angle > 130.0F ? 30 : (angle > 70.0F ? 20 : (angle > 30.0F ? 15 : 5));
-        return Math.max(10, baseDelay + (int) (rand.nextGaussian() * variance));
-    }
-
-    private boolean isMovingForward() {
-        return mc.player != null && mc.options.forwardKey.isPressed();
-    }
-
-    private boolean isOvertakingTarget(LivingEntity target) {
-        if (mc.player != null && target != null) {
-            Vec3d playerPos = mc.player.getPos();
-            Vec3d targetPos = target.getPos();
-
-            Vec3d playerVel = new Vec3d(
-                    mc.player.getX() - mc.player.prevX,
-                    mc.player.getY() - mc.player.prevY,
-                    mc.player.getZ() - mc.player.prevZ
-            );
-
-            Vec3d targetVel = new Vec3d(
-                    target.getX() - target.prevX,
-                    target.getY() - target.prevY,
-                    target.getZ() - target.prevZ
-            );
-
-            Vec3d toTarget = targetPos.subtract(playerPos).normalize();
-
-            double playerSpeedToTarget = playerVel.dotProduct(toTarget);
-            double targetSpeedToPlayer = targetVel.dotProduct(toTarget.multiply(-1.0));
-            double relativeSpeed = playerSpeedToTarget + targetSpeedToPlayer;
-
-            double distance = Math.sqrt(
-                    Math.pow(playerPos.x - targetPos.x, 2.0) + Math.pow(playerPos.z - targetPos.z, 2.0)
-            );
-
-            return relativeSpeed > 0.05 && distance < 4.0;
+        this.ticksSinceAttack = 0;
+        this.state[2] += 1.0f;
+        this.state[5] = rand(8.0f, 10.0f);
+        this.state[9] = randInt(9, 13);
+        if (this.state[2] == -1.0f) {
+            this.state[4] = randInt(30, 35);
         }
-
-        return false;
-    }
-
-    private float[] generateNoise(float dist) {
-        float scale = MathHelper.clamp(dist / 4.5F, 0.25F, 1.0F);
-
-        noiseWalkYaw += (float) (rand.nextGaussian() * 0.4 * scale);
-        noiseWalkPitch += (float) (rand.nextGaussian() * 0.3 * scale);
-
-        noiseWalkYaw *= 0.85F;
-        noiseWalkPitch *= 0.85F;
-
-        return new float[]{noiseWalkYaw, noiseWalkPitch};
-    }
-
-    private float smoothStep(float x) {
-        x = MathHelper.clamp(x, 0.0F, 1.0F);
-        return x * x * (3.0F - 2.0F * x);
-    }
-
-    private float accelCurve(float x) {
-        x = MathHelper.clamp(x, 0.0F, 1.0F);
-        return 1.0F - (1.0F - x) * (1.0F - x);
-    }
-
-    private float springInterp(float current, float target, float vel, float stiffness, float damping, boolean allowOvershoot) {
-        float diff = MathHelper.wrapDegrees(target - current);
-        if (allowOvershoot && Math.abs(diff) > 45.0F) {
-            stiffness *= 1.2F;
-            damping *= 0.8F;
-        }
-        float acc = diff * stiffness - vel * damping;
-        return vel + acc;
-    }
-
-    private float smoothLerp(float from, float to, float alpha) {
-        alpha = MathHelper.clamp(alpha, 0.0F, 1.0F);
-        float delta = MathHelper.wrapDegrees(to - from);
-        return from + delta * alpha;
-    }
-
-    private float calculateCurrentAngle(float targetYaw, float targetPitch) {
-        float dYaw = Math.abs(MathHelper.wrapDegrees(targetYaw - this.currentYaw));
-        float dPitch = Math.abs(targetPitch - this.currentPitch);
-        return dYaw + dPitch;
-    }
-
-    private void sendRotation(float yaw, float pitch) {
-        Rotation rotation = new Rotation(yaw, pitch);
-        RotationStorage.update(rotation, 360.0F, 45.0F, 45.0F, 45.0F, 0, 1, Aura.clientLook.isState());
-        this.rotate = new Vec2f(rotation.getYaw(), rotation.getPitch());
     }
 
     @Override
     public void updateRotations(LivingEntity target) {
-        if (mc.player == null || target == null) return;
-
-        boolean playerFlying = mc.player.isGliding();
-
-        if (this.trackedTarget != target) {
-            this.trackedTarget = target;
-
-            this.currentYaw = mc.player.getYaw();
-            this.currentPitch = mc.player.getPitch();
-            this.lastSentYaw = this.currentYaw;
-            this.lastSentPitch = this.currentPitch;
-            this.smoothYaw = this.currentYaw;
-            this.smoothPitch = this.currentPitch;
-            this.velocityYaw = this.velocityPitch = 0.0F;
-
-            this.pickAimPoint(target);
-
-            this.hitPhase = this.hitTimer = 0;
-
-            float angleDiff = this.measureAngle(target);
-            this.reactionMs = this.computeReaction(angleDiff);
-            this.firstSeenTime = System.currentTimeMillis();
-            this.reactionComplete = false;
-        }
-
-        Vec3d eyePos = mc.player.getEyePos();
-        Vec3d targetCenter = this.getPredictedPoint(target, target.getBoundingBox().getCenter());
-        float distance = (float) eyePos.distanceTo(targetCenter);
-        float gcd = this.calcGcd();
-
-        if (!this.reactionComplete) {
-            long elapsed = System.currentTimeMillis() - this.firstSeenTime;
-
-            if (elapsed < this.reactionMs) {
-                float jitterY = (float) rand.nextGaussian() * 0.15F;
-                float jitterP = (float) rand.nextGaussian() * 0.1F;
-
-                float outY = this.lastSentYaw + jitterY;
-                float outP = MathHelper.clamp(this.lastSentPitch + jitterP, -89.0F, 89.0F);
-
-                outY -= (outY - this.lastSentYaw) % gcd;
-                outP -= (outP - this.lastSentPitch) % gcd;
-
-                this.lastSentYaw = outY;
-                this.lastSentPitch = outP;
-
-                this.sendRotation(outY, outP);
-                return;
-            }
-
-            this.reactionComplete = true;
-        }
-
-        float[] noise = this.generateNoise(distance);
-
-        if (this.hitPhase > 0) {
-            this.hitTimer++;
-
-            int upDuration = 25;
-            int downDuration = 20;
-            float targetPitchUp = -89.0F;
-
-            if (this.hitPhase == 1) {
-                float t = MathHelper.clamp((float) this.hitTimer / upDuration, 0.0F, 1.0F);
-                this.currentPitch = MathHelper.lerp(this.accelCurve(t), this.pitchBeforeHit, targetPitchUp);
-
-                if (this.hitTimer >= upDuration) {
-                    this.hitPhase = 2;
-                    this.hitTimer = 0;
-                }
-            } else if (this.hitPhase == 2) {
-                float t = MathHelper.clamp((float) this.hitTimer / downDuration, 0.0F, 1.0F);
-                this.currentPitch = MathHelper.lerp(this.smoothStep(t), targetPitchUp, this.pitchBeforeHit);
-
-                if (this.hitTimer >= downDuration) {
-                    this.hitPhase = 0;
-                    this.hitTimer = 0;
-                }
-            }
-
-            float outY = this.currentYaw + noise[0];
-            float outP = MathHelper.clamp(this.currentPitch + noise[1], -89.0F, 89.0F);
-
-            outY -= (outY - this.lastSentYaw) % gcd;
-            outP -= (outP - this.lastSentPitch) % gcd;
-
-            this.lastSentYaw = outY;
-            this.lastSentPitch = outP;
-
-            this.sendRotation(outY, outP);
+        if (mc.player == null || target == null) {
             return;
         }
 
-        if (rand.nextDouble() < 0.015) {
-            this.pickAimPoint(target);
+        if (!initialized) {
+            initialized = true;
+            lastAdvanceTick = mc.player.age;
+            trackedTarget = target;
+            Arrays.fill(pitchHistory, mc.player.getPitch());
         }
 
-        Vec3d targetVel = new Vec3d(
-                target.getX() - target.prevX,
-                target.getY() - target.prevY,
-                target.getZ() - target.prevZ
-        );
+        if (trackedTarget != target) {
+            trackedTarget = target;
+            state[10] = 0.0f;
+            state[11] = 0.0f;
+            Arrays.fill(pitchHistory, mc.player.getPitch());
+        }
 
-        int predictTicks = this.shouldUseElytraPredict(target) ? 0 : 2;
-        Vec3d predictedCenter = targetCenter.add(targetVel.multiply(predictTicks));
-        Vec3d aimPos = predictedCenter.add(this.aimPointX, this.aimPointY, this.aimPointZ);
-        Vec3d direction = aimPos.subtract(eyePos);
+        // Референс двигает состояние раз в тик (GlobalEvent), а updateRotations
+        // прилетает ~240 раз/сек — навёрстываем пропущенные тики по age игрока.
+        while (lastAdvanceTick != mc.player.age) {
+            lastAdvanceTick = mc.player.age;
+            advanceTick(target);
+        }
 
-        float wantYaw = (float) MathHelper.wrapDegrees(Math.toDegrees(Math.atan2(direction.z, direction.x)) - 90.0);
-        float wantPitch = (float) (-Math.toDegrees(Math.atan2(direction.y, direction.horizontalLength())));
+        sendRotation(outYaw, outPitch);
+    }
 
-        float diffYaw = MathHelper.wrapDegrees(wantYaw - this.currentYaw);
-        float diffPitch = wantPitch - this.currentPitch;
-        float speedMultiplier = 1.0F;
+    /** Один тик логики референса ({@code w()} + {@code a()} для «ФанТайм ФОВ»). */
+    private void advanceTick(LivingEntity target) {
+        ticksSinceAttack++;
 
-        if (playerFlying) {
-            float currentAngle = this.calculateCurrentAngle(wantYaw, wantPitch);
+        // ---- точка прицела (AuraUtil.a(eye, target, reach, true)) ----
+        Vec3d eye = mc.player.getEyePos();
+        float range = Aura.INSTANCE.getRangeValue();
+        Vec3d targetPosition = FunTimeUtil.computeAimPoint(eye, target, range, true);
+        float yawToTarget = targetPosition == Vec3d.ZERO
+                ? FreeLookStorage.getFreeYaw()
+                : (float) MathHelper.wrapDegrees(Math.toDegrees(Math.atan2(targetPosition.z, targetPosition.x)) - 90.0);
+        float pitchToTarget = targetPosition == Vec3d.ZERO
+                ? FreeLookStorage.getFreePitch()
+                : (float) (-Math.toDegrees(Math.atan2(targetPosition.y, Math.hypot(targetPosition.x, targetPosition.z))));
 
-            if (currentAngle > 120.0F) {
-                speedMultiplier = 0.18F;
-            } else if (currentAngle > 80.0F) {
-                speedMultiplier = MathHelper.lerp(this.smoothStep((currentAngle - 80.0F) / 40.0F), 0.35F, 0.18F);
-            } else if (currentAngle > 25.0F) {
-                speedMultiplier = MathHelper.lerp(this.smoothStep((currentAngle - 25.0F) / 55.0F), 0.65F, 0.35F);
-            } else {
-                speedMultiplier = 0.65F + 0.35F * (1.0F - currentAngle / 25.0F);
-            }
+        System.arraycopy(pitchHistory, 0, pitchHistory, 1, 29);
+        pitchHistory[0] = pitchToTarget;
+
+        // ---- случайный дополнительный удар (часть обхода ач) ----
+        Vec3d targetPos = target.getPos();
+        if (lastTargetPos == null || targetPos.squaredDistanceTo(lastTargetPos) > 1.0E-4) {
+            targetIdleTicks = 0;
         } else {
-            if (this.isMovingForward() || this.isOvertakingTarget(target)) {
-                speedMultiplier = 0.5F;
+            targetIdleTicks++;
+        }
+        lastTargetPos = targetPos;
+
+        if (ticksSinceAttack >= 2
+                && (targetIdleTicks > 6 || state[2] > 43.0f)
+                && state[2] >= 33.0f
+                && (ticksSinceAttack == 4 || Math.random() > 0.5)
+                && (!extraAttackToggle || !FunTimeUtil.isEntityInFov(mc.player.getYaw(), mc.player.getPitch(), 3.0, target, false))) {
+            Aura.INSTANCE.funTimeExtraAttack();
+            if (Math.random() > 0.5) {
+                extraAttackToggle = !extraAttackToggle;
+            }
+            state[2] = randInt(-10, 10);
+        }
+
+        // ---- готовность к удару (c[3]) ----
+        boolean skip = (mc.player.isUsingItem() && mc.player.getItemUseTimeLeft() > 0 && ticksSinceAttack >= 8)
+                || mc.currentScreen != null;
+        if ((state[3] <= 0.0f && canAttack(target)) || FunTimeUtil.isFallingCritReady(ticksSinceAttack, target, skip)) {
+            state[3] = 1.0f;
+            if (!mc.player.isTouchingWater() && Aura.INSTANCE.sprintReset.isState() && !mc.player.isOnGround()) {
+                state[0] = 1.0f;
             }
         }
 
-        float stiffness = (0.038F + (float) Math.abs(rand.nextGaussian()) * 0.007F) * speedMultiplier;
-        float damping = 0.68F + 0.12F * (1.0F - speedMultiplier);
-        float totalDiff = (float) Math.sqrt(diffYaw * diffYaw + diffPitch * diffPitch);
-
-        if (totalDiff > 32.0F) {
-            stiffness += 0.018F * speedMultiplier;
-        } else if (totalDiff < 4.2F) {
-            stiffness *= 0.48F;
+        // ---- ротация «ФанТайм ФОВ» (метод a() в референсе) ----
+        float t = mc.player.age + mc.getRenderTickCounter().getTickDelta(false);
+        float smoothW = (float) (Math.sin((double) t * 0.4000000008323731d) * 3.0d
+                + Math.sin(((double) t * 0.9500002390239708d) + 1.4000004888461306d) * 2.0d);
+        float smoothH = (float) (Math.cos(((double) t * 0.5d) + 0.7000001555309916d) * 0.5d
+                + Math.cos(((double) t * 0.7800000620494261d) + 3.10000031689524d) * 1.5d);
+        float finalPitch = FunTimeUtil.smoothAngle(
+                mc.player.getPitch(),
+                pitchHistory[MathHelper.clamp(10 - ticksSinceAttack, 0, 29)] + (smoothH * 1.5f),
+                rand(0.1f, 0.5f));
+        float finalYaw = FunTimeUtil.smoothAngle(
+                mc.player.getYaw(),
+                yawToTarget + smoothW,
+                rand(0.1f, 0.4f));
+        if (state[3] >= 0.0f) {
+            if (!FunTimeUtil.isEntityInFov(mc.player.getYaw(), mc.player.getPitch(), range, target, true) && state[8] <= 0.0f) {
+                finalYaw = yawToTarget;
+            }
+            if (!FunTimeUtil.isEntityInFov(yawToTarget, finalPitch, range, target, true) && state[8] <= 0.0f) {
+                finalPitch = pitchToTarget;
+            }
+            if (!FunTimeUtil.isEntityInFov(mc.player.getYaw() + smoothW, mc.player.getYaw() + smoothH, range, target, true)
+                    && FunTimeUtil.isEntityInFov(mc.player.getYaw(), mc.player.getPitch(), range, target, true)) {
+                smoothW = MathHelper.clamp(smoothW, -0.05f, 0.05f);
+                smoothH = MathHelper.clamp(smoothH, -0.05f, 0.05f);
+            }
+        }
+        if (ticksSinceAttack <= 4 && state[2] % 2.0f == 0.0f) {
+            finalYaw = mc.player.getYaw();
         }
 
-        stiffness += MathHelper.clamp((distance - 1.6F) / 7.5F, 0.0F, 0.045F) * speedMultiplier;
+        // «ФанТайм ФОВ»: питч остаётся на реальном взгляде игрока (Look.c()), наводится только yaw
+        outYaw = finalYaw + smoothW;
+        outPitch = FreeLookStorage.getFreePitch() + smoothH;
 
-        this.velocityYaw = this.springInterp(this.currentYaw, this.currentYaw + diffYaw, this.velocityYaw, stiffness, damping, true);
-        this.velocityPitch = this.springInterp(this.currentPitch, wantPitch, this.velocityPitch, stiffness * 0.87F, damping, false);
+        // ---- декременты в конце тика ----
+        state[3] -= 1.0f;
+        state[5] -= 1.0f;
+        state[8] -= 1.0f;
+        state[1] = (float) MathHelper.wrapDegrees(Math.toDegrees(Math.atan2(
+                target.getZ() - mc.player.getZ(), target.getX() - mc.player.getX())) - 90.0);
+    }
 
-        float maxVelYaw = 7.5F * speedMultiplier;
-        float maxVelPitch = 5.8F * speedMultiplier;
+    /** Аналог {@code q()} референса: можно ли сейчас ударить (влияет на окно наводки c[3]). */
+    private boolean canAttack(LivingEntity target) {
+        if (mc.player.isUsingItem() && mc.player.getItemUseTimeLeft() > 0 && ticksSinceAttack >= 8) {
+            ticksSinceAttack = 8;
+            return false;
+        }
+        if (mc.currentScreen != null || !FunTimeUtil.isEntityInRange(target, Aura.INSTANCE.getRangeValue())) {
+            return false;
+        }
+        if (mc.player.fallDistance > 1.5f) {
+            if (mc.player.getItemCooldownManager().isCoolingDown(mc.player.getMainHandStack()) || ticksSinceAttack <= 3) {
+                return false;
+            }
+        } else if (mc.player.getAttackCooldownProgress(0.5f) < 0.9f || ticksSinceAttack < 10) {
+            return false;
+        }
+        return FunTimeUtil.isFalling()
+                || (mc.player.isOnGround() && !mc.player.input.playerInput.jump())
+                || !FunTimeUtil.canMove();
+    }
 
-        this.velocityYaw = MathHelper.clamp(this.velocityYaw, -maxVelYaw, maxVelYaw);
-        this.velocityPitch = MathHelper.clamp(this.velocityPitch, -maxVelPitch, maxVelPitch);
+    private void sendRotation(float yaw, float pitch) {
+        Rotation rotation = new Rotation(yaw, pitch);
+        RotationStorage.update(rotation, 220.0F, 220.0F, 220.0F, 220.0F, 0, 1, Aura.clientLook.isState());
+        this.rotate = new Vec2f(rotation.getYaw(), rotation.getPitch());
+    }
 
-        this.currentYaw += this.velocityYaw;
-        this.currentPitch = MathHelper.clamp(this.currentPitch + this.velocityPitch, -89.0F, 89.0F);
+    /** Равномерный случайный float (аналог MathUtil.a(min, max) в референсе). */
+    private static float rand(float min, float max) {
+        return (float) (min + Math.random() * (max - min));
+    }
 
-        float smoothFactor = playerFlying ? 0.3F + speedMultiplier * 0.4F : 0.85F;
-
-        this.smoothYaw = this.smoothLerp(this.smoothYaw, this.currentYaw, smoothFactor);
-        this.smoothPitch = this.smoothLerp(this.smoothPitch, this.currentPitch, smoothFactor * 0.95F);
-
-        float outY = this.smoothYaw + noise[0];
-        float outP = MathHelper.clamp(this.smoothPitch + noise[1], -89.0F, 89.0F);
-
-        outY -= (outY - this.lastSentYaw) % gcd;
-        outP -= (outP - this.lastSentPitch) % gcd;
-
-        this.lastSentYaw = outY;
-        this.lastSentPitch = outP;
-
-        this.sendRotation(outY, outP);
+    /** Равномерный случайный int (аналог (int) MathUtil.a(min, max) в референсе). */
+    private static int randInt(int min, int max) {
+        return (int) (min + Math.random() * (max - min + 1));
     }
 }

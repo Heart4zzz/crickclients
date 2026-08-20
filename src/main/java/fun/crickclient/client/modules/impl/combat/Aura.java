@@ -97,7 +97,7 @@ public class Aura extends Module {
     private final FloatSetting aimRange = new FloatSetting("Дистанция наводки", 3f, 0f, 6f, 0.05f);
     private final FloatSetting elytraAimRange = new FloatSetting("Дистанция на элитрах", 50f, 10f, 100f, 0.05f);
     public final BooleanSetting smartCrit = new BooleanSetting("Умные криты", false);
-    private final BooleanSetting sprintReset = new BooleanSetting("Сброс спринта", true);
+    public final BooleanSetting sprintReset = new BooleanSetting("Сброс спринта", true);
     private final BooleanSetting throughWalls = new BooleanSetting("Бить через стены", true);
     private final BooleanSetting raycast = new BooleanSetting("Проверка на наведение", false);
     private final BooleanSetting unpressShield = new BooleanSetting("Отжимать щит", false);
@@ -378,6 +378,21 @@ public class Aura extends Module {
 
     public void Rotate() {
         rotate();
+    }
+
+    /** Дистанция атаки (используется ротацией FunTime как «Дистанция атаки» референса). */
+    public float getRangeValue() {
+        return range.getValue().floatValue();
+    }
+
+    /**
+     * Случайный дополнительный удар из ротации «ФанТайм ФОВ» (аналог invokeDoAttack()
+     * в референсе). Вызывается самой ротацией по своим условиям.
+     */
+    public void funTimeExtraAttack() {
+        if (mc.player == null || mc.world == null || target == null) return;
+        if (mc.player.isUsingItem() && mc.player.getItemUseTimeLeft() > 0) return;
+        attack();
     }
 
 
