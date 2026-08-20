@@ -30,6 +30,7 @@ import org.joml.Matrix4f;
 import fun.crickclient.api.events.EventLink;
 import fun.crickclient.api.events.implement.EventBinding;
 import fun.crickclient.api.events.implement.EventClickSlot;
+import fun.crickclient.api.events.implement.EventMoveInput;
 import fun.crickclient.api.events.implement.EventRender;
 import fun.crickclient.api.events.implement.EventTickPre;
 import fun.crickclient.api.utils.color.ColorUtils;
@@ -38,6 +39,7 @@ import fun.crickclient.api.utils.notification.NotificationManager;
 import fun.crickclient.api.utils.render.RenderUtils;
 import fun.crickclient.client.modules.Module;
 import fun.crickclient.client.modules.settings.implement.BindSetting;
+import fun.crickclient.client.modules.settings.implement.BooleanSetting;
 import fun.crickclient.client.modules.settings.implement.ModeSetting;
 import fun.crickclient.client.modules.settings.implement.TextSetting;
 
@@ -51,6 +53,8 @@ public class AutoSwap extends Module {
 
     private final BindSetting offhandSwapKey = new BindSetting("Offhand Swap key", -1);
     private final BindSetting headSwapKey = new BindSetting("Head Swap key", -1);
+
+    private final BooleanSetting serverBypass = new BooleanSetting("Обход серверов", false);
 
     private final ModeSetting swapMode = new ModeSetting("Swap mode", "Wheel", "Simple", "Wheel");
     private final ModeSetting firstItem = new ModeSetting("First item", "Shield", "Shield", "GApple", "Totem", "Ball");
@@ -72,13 +76,20 @@ public class AutoSwap extends Module {
     private int wheelKey = -1;
     private boolean cursorUnlocked;
 
+    private boolean needSprintReset = false;
+    private boolean sprintResetDone = false;
+    private int sprintResetTicks = 0;
+    private int pendingSwapSlot = -1;
+    private int pendingSwapTargetSlot = -1;
+    private int pendingSwapAge = 0;
+
     private static final float OUTER_R = 75f;
     private static final float INNER_R = 50f;
     private static final int WHEEL_COUNT = 8;
 
     public AutoSwap() {
         super("AutoSwap", "Быстрая смена предметов в офф-хенде и на голове", ModuleCategory.COMBAT);
-        addSettings(offhandSwapKey, headSwapKey, swapMode, firstItem, secondItem,
+        addSettings(offhandSwapKey, headSwapKey, serverBypass, swapMode, firstItem, secondItem,
                 slot1, slot2, slot3, slot4, slot5, slot6, slot7, slot8);
     }
 
@@ -130,11 +141,26 @@ public class AutoSwap extends Module {
     }
 
     @EventLink
+    public void onMoveInput(final EventMoveInput event) {
+        if (!needSprintReset) return;
+
+        event.setForward(0);
+        event.setStrafe(0);
+        needSprintReset = false;
+        sprintResetDone = true;
+        sprintResetTicks = 0;
+    }
+
+    @EventLink
     public void onTick(final EventTickPre event) {
         if (mc.player == null) {
             resetWheel();
+            resetSprintState();
             return;
         }
+
+        handlePendingSwap();
+
         if (!wheelOpen) return;
 
         if (pendingPickSlot != -1) {
@@ -188,6 +214,7 @@ public class AutoSwap extends Module {
     @Override
     public void onDisable() {
         resetWheel();
+        resetSprintState();
         super.onDisable();
     }
 
@@ -400,7 +427,61 @@ public class AutoSwap extends Module {
 
     private void executeSwapLogicBySlot(int slot, int targetContainerSlot) {
         int containerSlot = slot < 9 ? slot + 36 : slot;
+
+        // Обход серверов — сначала сбрасываем спринт (как в ауре), свап уходит следующим тиком
+        if (shouldSprintResetBeforeSwap()) {
+            pendingSwapSlot = containerSlot;
+            pendingSwapTargetSlot = targetContainerSlot;
+            pendingSwapAge = 0;
+            needSprintReset = true;
+            return;
+        }
+
         executeGrimSwap(containerSlot, targetContainerSlot);
+        resetSprintState();
+    }
+
+    private boolean shouldSprintResetBeforeSwap() {
+        return serverBypass.isState()
+                && mc.player != null
+                && mc.player.isSprinting()
+                && !sprintResetDone
+                && pendingSwapSlot == -1;
+    }
+
+    /** Досылает отложенный свап после того, как ввод движения был обнулён (сброс спринта). */
+    private void handlePendingSwap() {
+        if (sprintResetDone) {
+            sprintResetTicks++;
+        }
+
+        if (pendingSwapSlot == -1) {
+            if (sprintResetDone) resetSprintState();
+            return;
+        }
+
+        // Страховка от зависшего свапа, если ввод движения так и не обновился
+        if (++pendingSwapAge > 10) {
+            resetSprintState();
+            return;
+        }
+
+        if (needSprintReset) return;
+        if (sprintResetDone && sprintResetTicks < 1) return;
+
+        int slot = pendingSwapSlot;
+        int targetSlot = pendingSwapTargetSlot;
+        resetSprintState();
+        executeGrimSwap(slot, targetSlot);
+    }
+
+    private void resetSprintState() {
+        needSprintReset = false;
+        sprintResetDone = false;
+        sprintResetTicks = 0;
+        pendingSwapSlot = -1;
+        pendingSwapTargetSlot = -1;
+        pendingSwapAge = 0;
     }
 
     private void executeGrimSwap(int slot, int targetSlot) {
