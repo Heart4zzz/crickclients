@@ -1,5 +1,6 @@
 package fun.crickclient.client.ui.clickgui;
 
+import fun.crickclient.api.storages.implement.ConfigStorage;
 import fun.crickclient.api.utils.input.KeyBoardUtils;
 import fun.crickclient.client.modules.Module;
 import fun.crickclient.client.modules.settings.Setting;
@@ -250,6 +251,7 @@ public class ModuleComponent extends Component {
                 module.setKey(keyCode);
             }
             binding = false;
+            ConfigStorage.saveCurrent();
             return;
         }
 

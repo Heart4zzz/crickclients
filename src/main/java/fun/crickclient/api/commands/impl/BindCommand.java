@@ -6,6 +6,7 @@ import org.lwjgl.glfw.GLFW;
 
 import fun.crickclient.CrickClient;
 import fun.crickclient.api.commands.Command;
+import fun.crickclient.api.storages.implement.ConfigStorage;
 import fun.crickclient.api.storages.implement.helpertstorages.enumvar.ModuleClass;
 import fun.crickclient.api.utils.chat.ChatUtils;
 import fun.crickclient.client.modules.Module;
@@ -70,6 +71,7 @@ public class BindCommand extends Command {
                                         ChatUtils.sendMessage("Клавиша " + keyName + " не найдена");
                                     } else {
                                         module.setKey(keyCode);
+                                        ConfigStorage.saveCurrent();
                                         ChatUtils.sendMessage("Модуль " + module.getName() + " привязан к клавише " + keyName);
                                     }
                                     return SINGLE_SUCCESS;
@@ -85,12 +87,14 @@ public class BindCommand extends Command {
 
             Module module = optionalModule.get();
             module.setKey(-1);
+            ConfigStorage.saveCurrent();
             ChatUtils.sendMessage("Привязка клавиши для модуля " + module.getName() + " удалена");
             return SINGLE_SUCCESS;
         })));
 
         builder.then(literal("clear").executes(ctx -> {
             ModuleClass.INSTANCE.getObject().forEach(module -> module.setKey(-1));
+            ConfigStorage.saveCurrent();
             ChatUtils.sendMessage("Все привязки клавиш удалены");
             return SINGLE_SUCCESS;
         }));
