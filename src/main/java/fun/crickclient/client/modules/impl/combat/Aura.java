@@ -59,6 +59,7 @@ import fun.crickclient.api.utils.rotate.RotationUtils;
 import fun.crickclient.client.modules.Module;
 import fun.crickclient.client.modules.impl.combat.components.RotationsSystem;
 import fun.crickclient.client.modules.impl.combat.components.interpolation.BestPoint;
+import fun.crickclient.client.modules.impl.combat.components.rotations.FunTimeRotation;
 import fun.crickclient.client.modules.impl.combat.components.rotations.LegitRotation;
 import fun.crickclient.client.modules.impl.combat.components.rotations.SlothRotation;
 import fun.crickclient.client.modules.impl.combat.components.rotations.TestRotation;
@@ -82,7 +83,7 @@ public class Aura extends Module {
     public static Aura INSTANCE = new Aura();
 
     public final ModeSetting rotationType = new ModeSetting("Ротация", "Smooth",
-            "Smooth", "Snap", "Data", "Sloth", "NoRotate");
+            "Smooth", "Snap", "Data", "Sloth", "FunTime", "NoRotate");
 
     private final ListSetting targets = new ListSetting("Таргеты",
             new BooleanSetting("Игроки", true),
@@ -122,6 +123,7 @@ public class Aura extends Module {
     private final TestRotation testRotation = new TestRotation();
     private final SlothRotation slothRotation = new SlothRotation();
     private final WhiteRiseRotation whiteRiseRotation = new WhiteRiseRotation(this);
+    private final FunTimeRotation funTimeRotation = new FunTimeRotation();
 
     private final TimerUtils backTimer = new TimerUtils();
 
@@ -364,6 +366,7 @@ public class Aura extends Module {
             testRotation.reset();
             slothRotation.reset();
             whiteRiseRotation.reset();
+            funTimeRotation.reset();
             dataSystem.resetState();
             lastDataTarget = null;
             sprintResetDone = false;
@@ -441,6 +444,8 @@ public class Aura extends Module {
             system = testRotation;
         } else if (rotationType.is("Sloth")) {
             system = whiteRiseRotation;
+        } else if (rotationType.is("FunTime")) {
+            system = funTimeRotation;
         } else if (rotationType.is("NoRotate")) {
             system = new RotationsSystem() {
                 @Override
@@ -808,6 +813,7 @@ public class Aura extends Module {
 
         if (rotationType.is("WhiteRise")) slothRotation.onAttack();
         if (rotationType.is("Sloth")) whiteRiseRotation.onAttack();
+        if (rotationType.is("FunTime")) funTimeRotation.onAttack();
 
         long cooldown = 467L;
 
@@ -1080,6 +1086,7 @@ public class Aura extends Module {
         testRotation.reset();
         slothRotation.reset();
         whiteRiseRotation.reset();
+        funTimeRotation.reset();
         dataSystem.resetState();
         lastDataTarget = null;
         needSprintReset = false;
@@ -1096,6 +1103,7 @@ public class Aura extends Module {
         testRotation.reset();
         slothRotation.reset();
         whiteRiseRotation.reset();
+        funTimeRotation.reset();
         dataSystem.resetState();
         lastDataTarget = null;
         needSprintReset = false;

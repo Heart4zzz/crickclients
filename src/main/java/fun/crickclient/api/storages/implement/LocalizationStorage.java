@@ -148,6 +148,7 @@ public class LocalizationStorage {
         add("Левая рука Z", "Left Hand Z", "Ліва рука Z");
         add("Авто-взлёт", "Auto Takeoff", "Авто зліт");
         add("Обходить Grim", "Bypass Grim", "Обходити Grim");
+        add("Обход серверов", "Server Bypass", "Обхід серверів");
         add("Крылья", "Wings", "Крила");
         add("Крылья 2", "Wings 2", "Крила 2");
         add("Китайская шляпа", "China Hat", "Китайський капелюх");
