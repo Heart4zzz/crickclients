@@ -83,7 +83,14 @@ public class Aura extends Module {
     public static Aura INSTANCE = new Aura();
 
     public final ModeSetting rotationType = new ModeSetting("Ротация", "Smooth",
-            "Smooth", "Snap", "Data", "Sloth", "FunTime", "NoRotate");
+            "Smooth", "Snap", "Data", "Sloth", "FunTime", "NoRotate", "AI");
+
+    // AI settings - these appear when AI rotation is selected
+    public final ModeSetting aiType = new ModeSetting("Тип ИИ", "Обычный",
+            "Обычный", "С Джиттером", "С Хуман Миссами");
+
+    public final FloatSetting aiJitter = new FloatSetting("AI Jitter", 1f, 0f, 5f, 0.1f);
+    public final BooleanSetting aiHumanMisses = new BooleanSetting("AI Human Misses", false);
 
     private final ListSetting targets = new ListSetting("Таргеты",
             new BooleanSetting("Игроки", true),
@@ -117,6 +124,17 @@ public class Aura extends Module {
     private final NeuroAuraStorage dataSystem = new NeuroAuraStorage();
     @Getter
     private final TimerUtils attackTimer = new TimerUtils();
+    @Getter
+    private boolean isTraining = false;
+    public void setTraining(boolean state) {
+        isTraining = state;
+    }
+
+    public void setCurrentTrainingProfile(String name) {
+        currentTrainingProfile = name;
+    }
+    @Getter
+    private String currentTrainingProfile = "";
     private final BooleanSetting rwWallBypass = new BooleanSetting("Обход рв стен", false);
     private final BooleanSetting rwWallLookDown = new BooleanSetting("Смотреть вниз", false).visible(rwWallBypass::isState);
     private final WellMineRotation wellMineRotation = new WellMineRotation();
@@ -517,6 +535,58 @@ public class Aura extends Module {
                             pitchReturnSpeed,
                             1,
                             1, clientLook.isState()
+                    );
+                }
+            };
+        } else if (rotationType.is("AI")) {
+            system = new RotationsSystem() {
+                @Override
+                public void updateRotations(LivingEntity target) {
+                    if (target == null) return;
+
+                    float currentYaw = mc.player.getYaw();
+                    float currentPitch = mc.player.getPitch();
+
+                    // Get jitter and human misses settings
+                    float jitter = aiJitter.getValue().floatValue();
+                    boolean humanMisses = aiHumanMisses.isState();
+
+                    // Get base rotation
+                    Rotation baseRotation = null;
+                    if (dataSystem.isUsingNeuro() && !dataSystem.getFrames().isEmpty()) {
+                        baseRotation = dataSystem.getNeuroRotation(target, currentYaw, currentPitch, true);
+                    }
+
+                    if (baseRotation == null) {
+                        Vec3d point = MultipointUtils.getClosestPoint(target);
+                        if (point == null) {
+                            point = target.getBoundingBox().getCenter();
+                        }
+                        Vec2f fallbackRot = RotationUtils.getRotations(point);
+                        baseRotation = new Rotation(fallbackRot.x, fallbackRot.y);
+                    }
+
+                    // Apply jitter
+                    float jitterYaw = jitter * (ThreadLocalRandom.current().nextFloat() - 0.5f);
+                    float jitterPitch = jitter * (ThreadLocalRandom.current().nextFloat() - 0.5f);
+
+                    // Apply human misses if enabled (default off)
+                    float missYaw = 0f, missPitch = 0f;
+                    if (humanMisses && ThreadLocalRandom.current().nextFloat() < 0.3f) {
+                        missYaw = -jitter * 1.5f;
+                        missPitch = -jitter * 1.5f;
+                    }
+
+                    final float yaw = baseRotation.getYaw() + jitterYaw + missYaw;
+                    final float pitch = baseRotation.getPitch() + jitterPitch + missPitch;
+
+                    targetRotations = new Vec2f(yaw, pitch);
+                    currentRotations = new Vec2f(currentYaw, currentPitch);
+
+                    RotationStorage.update(
+                            new Rotation(yaw, pitch),
+                            200.0f, 200.0f, 200.0f, 200.0f,
+                            1, 1, clientLook.isState()
                     );
                 }
             };
