@@ -1,7 +1,5 @@
 package fun.crickclient.api.storages.implement;
 
-import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Box;
@@ -39,23 +37,12 @@ public class NeuroAuraStorage implements QClient {
     private static final float MAX_YAW_CORRECTION = 8.0f;
     private static final float MAX_PITCH_CORRECTION = 6.0f;
 
-    @Getter
     private final List<NeuroPattern> recordedPatterns = new CopyOnWriteArrayList<>();
-    @Getter
-    @Setter
     private boolean isRecording = false;
-    @Getter
-    @Setter
     private boolean isUsingNeuro = false;
-    @Getter
-    @Setter
     private boolean showStats = true;
-    @Getter
-    @Setter
     private String currentPatternName = null;
-    @Getter
     private String lastDebugMessage = "Готов!";
-    @Getter
     private int recordedThisSession = 0;
 
     private long lastRecordTime = 0L;
@@ -82,6 +69,60 @@ public class NeuroAuraStorage implements QClient {
     private float randomXOffset = 0f;
     private float randomYRatio = 0.66f;
     private float randomZOffset = 0f;
+
+    public List<NeuroPattern> getRecordedPatterns() {
+        return recordedPatterns;
+    }
+
+    public boolean isRecording() {
+        return isRecording;
+    }
+
+    public void setRecording(boolean recording) {
+        isRecording = recording;
+    }
+
+    public boolean isUsingNeuro() {
+        return isUsingNeuro;
+    }
+
+    public void setUsingNeuro(boolean usingNeuro) {
+        isUsingNeuro = usingNeuro;
+    }
+
+    public boolean isShowStats() {
+        return showStats;
+    }
+
+    public void setShowStats(boolean showStats) {
+        this.showStats = showStats;
+    }
+
+    public String getCurrentPatternName() {
+        return currentPatternName;
+    }
+
+    public void setCurrentPatternName(String currentPatternName) {
+        this.currentPatternName = currentPatternName;
+    }
+
+    public String getLastDebugMessage() {
+        return lastDebugMessage;
+    }
+
+    public int getRecordedThisSession() {
+        return recordedThisSession;
+    }
+
+    /** Returns whether a profile contains at least one usable target frame. */
+    public boolean hasFrames() {
+        for (Frame frame : frames) {
+            if (frame != null && frame.hasTarget) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     public NeuroAuraStorage() {
         createPatternsDirectory();
@@ -166,7 +207,7 @@ public class NeuroAuraStorage implements QClient {
     }
 
     public Rotation getNeuroRotation(LivingEntity target, float currentYaw, float currentPitch, boolean idle) {
-        if (!isUsingNeuro || target == null || mc.player == null || frames.isEmpty()) {
+        if (!isUsingNeuro || target == null || mc.player == null || !hasFrames()) {
             resetState();
             return null;
         }
@@ -493,12 +534,12 @@ public class NeuroAuraStorage implements QClient {
     }
 
     private int findBest(float angleYaw, float anglePitch, double distance) {
-        int best = 0;
+        int best = -1;
         float bestScore = Float.MAX_VALUE;
 
         for (int i = 0; i < frames.size(); i++) {
             Frame frame = frames.get(i);
-            if (!frame.hasTarget) {
+            if (frame == null || !frame.hasTarget) {
                 continue;
             }
 
@@ -517,10 +558,15 @@ public class NeuroAuraStorage implements QClient {
     }
 
     public boolean savePatterns(String profileName) {
-        if (frames.isEmpty()) {
-            lastDebugMessage = "§cНет записей";
+        if (profileName == null || profileName.isBlank() || !isSafeProfileName(profileName)) {
+            lastDebugMessage = "§cНекорректное имя профиля";
             return false;
         }
+        if (frames.isEmpty() || !hasFrames()) {
+            lastDebugMessage = "§cНет записей по цели";
+            return false;
+        }
+        createPatternsDirectory();
 
         try (ObjectOutputStream out = new ObjectOutputStream(
                 new FileOutputStream(PATTERNS_DIRECTORY + "/" + profileName + PRIMARY_EXTENSION))) {
@@ -537,8 +583,12 @@ public class NeuroAuraStorage implements QClient {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public boolean loadPatterns(String profileName) {
+        if (!isSafeProfileName(profileName)) {
+            lastDebugMessage = "§eНекорректное имя профиля";
+            return false;
+        }
+
         File file = resolveProfileFile(profileName);
         if (!file.exists()) {
             lastDebugMessage = "§eНе найдено: " + profileName;
@@ -552,13 +602,25 @@ public class NeuroAuraStorage implements QClient {
 
             if (obj instanceof SaveData data) {
                 if (data.patterns != null) {
-                    recordedPatterns.addAll(data.patterns);
+                    for (NeuroPattern pattern : data.patterns) {
+                        if (pattern != null) {
+                            recordedPatterns.add(pattern);
+                        }
+                    }
                 }
                 if (data.frames != null) {
-                    frames.addAll(data.frames);
+                    for (Frame frame : data.frames) {
+                        if (frame != null) {
+                            frames.add(frame);
+                        }
+                    }
                 }
             } else if (obj instanceof List<?> list) {
-                recordedPatterns.addAll((List<NeuroPattern>) list);
+                for (Object item : list) {
+                    if (item instanceof NeuroPattern pattern) {
+                        recordedPatterns.add(pattern);
+                    }
+                }
             }
 
             if (frames.isEmpty() && !recordedPatterns.isEmpty()) {
@@ -568,7 +630,7 @@ public class NeuroAuraStorage implements QClient {
             currentPatternName = profileName;
             resetState();
             lastDebugMessage = "§aЗагружено " + frames.size();
-            return !frames.isEmpty();
+            return hasFrames();
         } catch (IOException | ClassNotFoundException e) {
             lastDebugMessage = "§cОшибка загрузки";
             return false;
@@ -590,6 +652,10 @@ public class NeuroAuraStorage implements QClient {
     }
 
     public boolean deletePatterns(String profileName) {
+        if (!isSafeProfileName(profileName)) {
+            return false;
+        }
+
         File primaryFile = new File(PATTERNS_DIRECTORY + "/" + profileName + PRIMARY_EXTENSION);
         File legacyFile = new File(LEGACY_PATTERNS_DIRECTORY + "/" + profileName + LEGACY_EXTENSION);
         boolean deleted = false;
@@ -710,11 +776,23 @@ public class NeuroAuraStorage implements QClient {
     }
 
     private File resolveProfileFile(String profileName) {
+        if (!isSafeProfileName(profileName)) {
+            return new File(PATTERNS_DIRECTORY, "__invalid_profile__.data");
+        }
+
         File primaryFile = new File(PATTERNS_DIRECTORY + "/" + profileName + PRIMARY_EXTENSION);
         if (primaryFile.exists()) {
             return primaryFile;
         }
         return new File(LEGACY_PATTERNS_DIRECTORY + "/" + profileName + LEGACY_EXTENSION);
+    }
+
+    private boolean isSafeProfileName(String profileName) {
+        return profileName != null
+                && profileName.length() <= 64
+                && !profileName.equals(".")
+                && !profileName.equals("..")
+                && profileName.matches("[\\p{L}\\p{N} _.-]+");
     }
 
     private static class AimData {

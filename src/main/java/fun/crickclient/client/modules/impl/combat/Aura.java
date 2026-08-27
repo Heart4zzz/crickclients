@@ -1,6 +1,5 @@
 package fun.crickclient.client.modules.impl.combat;
 
-import lombok.Getter;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -76,6 +75,7 @@ import fun.crickclient.mixin.ILivingEntity;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static net.minecraft.util.math.MathHelper.wrapDegrees;
 
@@ -85,12 +85,11 @@ public class Aura extends Module {
     public final ModeSetting rotationType = new ModeSetting("Ротация", "Smooth",
             "Smooth", "Snap", "Data", "Sloth", "FunTime", "NoRotate", "AI");
 
-    // AI settings - these appear when AI rotation is selected
-    public final ModeSetting aiType = new ModeSetting("Тип ИИ", "Обычный",
-            "Обычный", "С Джиттером", "С Хуман Миссами");
-
-    public final FloatSetting aiJitter = new FloatSetting("AI Jitter", 1f, 0f, 5f, 0.1f);
-    public final BooleanSetting aiHumanMisses = new BooleanSetting("AI Human Misses", false);
+    // Настройки AI доступны только для выбранной AI-ротации.
+    public final FloatSetting aiJitter = new FloatSetting("Джиттер ИИ", 1f, 0f, 5f, 0.1f)
+            .visible(() -> rotationType.is("AI"));
+    public final BooleanSetting aiHumanMisses = new BooleanSetting("Человеческие промахи", false)
+            .visible(() -> rotationType.is("AI"));
 
     private final ListSetting targets = new ListSetting("Таргеты",
             new BooleanSetting("Игроки", true),
@@ -114,27 +113,49 @@ public class Aura extends Module {
     private final ModeSetting moveFix = new ModeSetting("Коррекция", "Нет", "Нет", "Свободная", "Сфокусированная", "Полная");
     private final ModeSetting priority = new ModeSetting("Приоритет", "Дистанция", "Дистанция", "Здоровье", "Угол", "Никакой");
 
-    @Getter
     private LivingEntity target;
-    @Getter
     private Vec2f currentRotations = new Vec2f(0f, 0f);
-    @Getter
     private Vec2f targetRotations = new Vec2f(0f, 0f);
-    @Getter
     private final NeuroAuraStorage dataSystem = new NeuroAuraStorage();
-    @Getter
     private final TimerUtils attackTimer = new TimerUtils();
-    @Getter
     private boolean isTraining = false;
+    private String currentTrainingProfile = "";
+
+    public LivingEntity getTarget() {
+        return target;
+    }
+
+    public Vec2f getCurrentRotations() {
+        return currentRotations;
+    }
+
+    public Vec2f getTargetRotations() {
+        return targetRotations;
+    }
+
+    public NeuroAuraStorage getDataSystem() {
+        return dataSystem;
+    }
+
+    public TimerUtils getAttackTimer() {
+        return attackTimer;
+    }
+
+    public boolean isTraining() {
+        return isTraining;
+    }
+
     public void setTraining(boolean state) {
         isTraining = state;
     }
 
-    public void setCurrentTrainingProfile(String name) {
-        currentTrainingProfile = name;
+    public String getCurrentTrainingProfile() {
+        return currentTrainingProfile;
     }
-    @Getter
-    private String currentTrainingProfile = "";
+
+    public void setCurrentTrainingProfile(String name) {
+        currentTrainingProfile = name == null ? "" : name;
+    }
     private final BooleanSetting rwWallBypass = new BooleanSetting("Обход рв стен", false);
     private final BooleanSetting rwWallLookDown = new BooleanSetting("Смотреть вниз", false).visible(rwWallBypass::isState);
     private final WellMineRotation wellMineRotation = new WellMineRotation();
@@ -170,7 +191,8 @@ public class Aura extends Module {
     public Aura() {
         super("AttackAura", "Автоматически наводиться и бьёт таргета", ModuleCategory.COMBAT);
         addSettings(rotationType, targets, range, aimRange, elytraAimRange, smartCrit, sprintReset,
-                attackOnEating, throughWalls, rwWallBypass, rwWallLookDown, raycast, unpressShield, breakShield, clientLook, moveFix, priority);
+                attackOnEating, throughWalls, rwWallBypass, rwWallLookDown, raycast, unpressShield,
+                breakShield, clientLook, moveFix, priority, aiJitter, aiHumanMisses);
     }
 
 
@@ -501,7 +523,7 @@ public class Aura extends Module {
                     Rotation rotation = null;
 
                     if (shouldUseElytraPredict(target)) {
-                        Vec2f rot = RotationUtils.getRotations(getPredictedPoint(target, fallbackPoint));
+                        Vec2f rot = RotationUtils.getRotations(getPredictedRotationPoint(target, fallbackPoint));
                         rotation = new Rotation(rot.x, rot.y);
                     } else if (!hardAcquire) {
                         rotation = dataSystem.getNeuroRotation(
@@ -547,38 +569,45 @@ public class Aura extends Module {
                     float currentYaw = mc.player.getYaw();
                     float currentPitch = mc.player.getPitch();
 
-                    // Get jitter and human misses settings
                     float jitter = aiJitter.getValue().floatValue();
                     boolean humanMisses = aiHumanMisses.isState();
 
-                    // Get base rotation
                     Rotation baseRotation = null;
-                    if (dataSystem.isUsingNeuro() && !dataSystem.getFrames().isEmpty()) {
-                        baseRotation = dataSystem.getNeuroRotation(target, currentYaw, currentPitch, true);
+                    if (dataSystem.isUsingNeuro() && dataSystem.hasFrames()) {
+                        baseRotation = dataSystem.getNeuroRotation(
+                                target,
+                                currentYaw,
+                                currentPitch,
+                                shouldFocusDataRotation()
+                        );
                     }
 
                     if (baseRotation == null) {
-                        Vec3d point = MultipointUtils.getClosestPoint(target);
-                        if (point == null) {
-                            point = target.getBoundingBox().getCenter();
-                        }
-                        Vec2f fallbackRot = RotationUtils.getRotations(point);
+                        Vec2f fallbackRot = RotationUtils.getRotations(getStableBodyPoint(target));
                         baseRotation = new Rotation(fallbackRot.x, fallbackRot.y);
                     }
 
-                    // Apply jitter
-                    float jitterYaw = jitter * (ThreadLocalRandom.current().nextFloat() - 0.5f);
-                    float jitterPitch = jitter * (ThreadLocalRandom.current().nextFloat() - 0.5f);
+                    // A small offset is applied around the learned rotation so that
+                    // playback does not produce the same exact angles on every tick.
+                    ThreadLocalRandom random = ThreadLocalRandom.current();
+                    float jitterYaw = jitter * (random.nextFloat() - 0.5f);
+                    float jitterPitch = jitter * (random.nextFloat() - 0.5f);
 
-                    // Apply human misses if enabled (default off)
-                    float missYaw = 0f, missPitch = 0f;
-                    if (humanMisses && ThreadLocalRandom.current().nextFloat() < 0.3f) {
-                        missYaw = -jitter * 1.5f;
-                        missPitch = -jitter * 1.5f;
+                    // Human misses are represented by an occasional short offset,
+                    // while the normal attack/raycast checks remain unchanged.
+                    float missYaw = 0.0f;
+                    float missPitch = 0.0f;
+                    if (humanMisses && random.nextFloat() < 0.30f) {
+                        missYaw = (random.nextFloat() - 0.5f) * jitter * 1.5f;
+                        missPitch = (random.nextFloat() - 0.5f) * jitter * 1.5f;
                     }
 
-                    final float yaw = baseRotation.getYaw() + jitterYaw + missYaw;
-                    final float pitch = baseRotation.getPitch() + jitterPitch + missPitch;
+                    final float yaw = MathHelper.wrapDegrees(baseRotation.getYaw() + jitterYaw + missYaw);
+                    final float pitch = MathHelper.clamp(
+                            baseRotation.getPitch() + jitterPitch + missPitch,
+                            -90.0f,
+                            90.0f
+                    );
 
                     targetRotations = new Vec2f(yaw, pitch);
                     currentRotations = new Vec2f(currentYaw, currentPitch);

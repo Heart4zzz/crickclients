@@ -1,24 +1,45 @@
 package fun.crickclient.api.utils.rotate;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import net.minecraft.client.util.math.Vector2f;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+
 import fun.crickclient.api.QClient;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+/** A yaw/pitch pair used by the rotation system. */
 public class Rotation implements QClient {
-    private float yaw, pitch;
+    private float yaw;
+    private float pitch;
+
+    public Rotation() {
+    }
+
+    public Rotation(float yaw, float pitch) {
+        this.yaw = yaw;
+        this.pitch = pitch;
+    }
 
     public Rotation(Entity entity) {
         yaw = entity.getYaw();
         pitch = entity.getPitch();
+    }
+
+    public float getYaw() {
+        return yaw;
+    }
+
+    public void setYaw(float yaw) {
+        this.yaw = yaw;
+    }
+
+    public float getPitch() {
+        return pitch;
+    }
+
+    public void setPitch(float pitch) {
+        this.pitch = pitch;
     }
 
     public float getDelta(Rotation target) {
@@ -38,11 +59,13 @@ public class Rotation implements QClient {
     }
 
     public static float cameraYaw() {
-        return MathHelper.wrapDegrees(mc.gameRenderer.getCamera().getYaw() + (mc.gameRenderer.getCamera().isThirdPerson() ? 180 : 0));
+        return MathHelper.wrapDegrees(mc.gameRenderer.getCamera().getYaw()
+                + (mc.gameRenderer.getCamera().isThirdPerson() ? 180 : 0));
     }
 
     public static float cameraPitch() {
-        return (mc.gameRenderer.getCamera().isThirdPerson() ? -1 : 1) * mc.gameRenderer.getCamera().getPitch();
+        return (mc.gameRenderer.getCamera().isThirdPerson() ? -1 : 1)
+                * mc.gameRenderer.getCamera().getPitch();
     }
 
     public static Rotation from(PlayerEntity player, Entity target) {
@@ -52,12 +75,10 @@ public class Rotation implements QClient {
         double dx = targetPos.x - playerPos.x;
         double dy = targetPos.y - playerPos.y;
         double dz = targetPos.z - playerPos.z;
-
         double distanceXZ = Math.sqrt(dx * dx + dz * dz);
 
         float yaw = (float) Math.toDegrees(Math.atan2(dz, dx)) - 90F;
         float pitch = (float) -Math.toDegrees(Math.atan2(dy, distanceXZ));
-
         return new Rotation(yaw, pitch);
     }
 
@@ -69,5 +90,10 @@ public class Rotation implements QClient {
         float j = MathHelper.cos(f);
         float k = MathHelper.sin(f);
         return new Vec3d(i * j, -k, h * j);
+    }
+
+    @Override
+    public String toString() {
+        return "Rotation{" + "yaw=" + yaw + ", pitch=" + pitch + '}';
     }
 }
