@@ -39,7 +39,8 @@ public class CommandStorage {
                 new StaffCommand(),
                 new VClipCommand(),
                 new DataCommand(),
-                new TPCommand()
+                new TPCommand(),
+                new AiCommand()
         );
     }
 
