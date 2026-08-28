@@ -68,7 +68,8 @@ public class AiCommand extends Command {
         aura.setCurrentTrainingProfile(name);
 
         ChatUtils.sendMessage("§aТренировка начата в профиле: §f" + name);
-        ChatUtils.sendMessage("§7Включите Aura и атакуйте игрока, моба или FakePlayer несколько минут.");
+        ChatUtils.sendMessage("§7Килл ауру включать не нужно: бейте игрока, моба или FakePlayer §fруками, критами§7, минут 5-10.");
+        ChatUtils.sendMessage("§7Каждый ваш удар записывается — аура потом бьёт по этим позам и не мисает.");
         ChatUtils.sendMessage("§7Для завершения и сохранения профиля напишите: §f.ai stop");
         return SINGLE_SUCCESS;
     }
