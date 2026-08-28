@@ -65,39 +65,49 @@ public final class LrcLoader {
 
         try {
             List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
-            List<LyricLine> result = new ArrayList<>();
-            long prevStart = -1L;
-
-            for (String raw : lines) {
-                Matcher matcher = TIME.matcher(raw.trim());
-                if (!matcher.find()) continue;
-
-                String text = matcher.group(3).trim();
-                if (text.isEmpty()) continue;
-
-                long startMs = parseTime(matcher.group(1), matcher.group(2));
-                if (prevStart >= 0L && startMs <= prevStart) continue;
-                prevStart = startMs;
-                result.add(new LyricLine(startMs, text));
-            }
-
+            List<LyricLine> result = parseLrc(String.join("\n", lines));
             if (result.isEmpty()) {
                 negativeCache.put(key, System.currentTimeMillis());
                 return null;
             }
-
-            for (int i = 0; i < result.size(); i++) {
-                LyricLine current = result.get(i);
-                LyricLine next = i + 1 < result.size() ? result.get(i + 1) : null;
-                current.endMs = next != null ? next.startMs : current.startMs + 20_000L;
-            }
-
             cache.put(key, result);
             return result;
         } catch (Exception e) {
             negativeCache.put(key, System.currentTimeMillis());
             return null;
         }
+    }
+
+    /**
+     * Разбор синхронизированного LRC («[mm:ss.xx]текст»).
+     * Строки без таймкода и не по возрастанию — пропускаются;
+     * endMs у каждой строки = startMs следующей.
+     * Без синхронизации возвращает пустой список.
+     */
+    public static List<LyricLine> parseLrc(String content) {
+        List<LyricLine> result = new ArrayList<>();
+        if (content == null || content.isEmpty()) return result;
+
+        long prevStart = -1L;
+        for (String raw : content.split("\n")) {
+            Matcher matcher = TIME.matcher(raw.trim());
+            if (!matcher.find()) continue;
+
+            String text = matcher.group(3).trim();
+            if (text.isEmpty()) continue;
+
+            long startMs = parseTime(matcher.group(1), matcher.group(2));
+            if (prevStart >= 0L && startMs <= prevStart) continue;
+            prevStart = startMs;
+            result.add(new LyricLine(startMs, text));
+        }
+
+        for (int i = 0; i < result.size(); i++) {
+            LyricLine current = result.get(i);
+            LyricLine next = i + 1 < result.size() ? result.get(i + 1) : null;
+            current.endMs = next != null ? next.startMs : current.startMs + 20_000L;
+        }
+        return result;
     }
 
     private static File resolveFile(String artist, String title) {

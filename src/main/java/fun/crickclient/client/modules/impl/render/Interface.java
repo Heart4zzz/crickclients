@@ -48,6 +48,7 @@ import fun.crickclient.api.utils.draggable.Draggable;
 import fun.crickclient.api.utils.input.KeyBoardUtils;
 import fun.crickclient.api.utils.math.HoveringUtils;
 import fun.crickclient.api.utils.music.MusicManager;
+import fun.crickclient.api.utils.music.MusicSettings;
 import fun.crickclient.api.utils.music.TrackState;
 import fun.crickclient.api.utils.notification.NotificationManager;
 import fun.crickclient.api.utils.player.Counter;
@@ -263,6 +264,8 @@ public class Interface extends Module {
     private final FloatSetting musShineAlpha = hidden(new FloatSetting("Прозрачность блика музыки", 30f, 0f, 100f, 1f));
     private final FloatSetting musShineThickness = hidden(new FloatSetting("Толщина блика музыки", 0.5f, 0.2f, 2.0f, 0.05f));
     private final BooleanSetting musCorners = hidden(new BooleanSetting("Уголки музыки", false));
+    /** false = Spotify, true = Яндекс Музыка (зеркало MusicSettings). */
+    private final BooleanSetting ymProvider = hidden(new BooleanSetting("Яндекс музыка", false));
 
     // TargetHUD
     private final BooleanSetting thBlur = hidden(new BooleanSetting("Блюр тх", true));
@@ -352,6 +355,9 @@ public class Interface extends Module {
 
         notificationsPopup.extraRows.add(new PopupRow(PopupKind.TOGGLE, "Состояния модулей", notifModuleStates, null));
         notificationsPopup.extraRows.add(new PopupRow(PopupKind.TOGGLE, "Снос тотема", notifTotem, null));
+
+        musicPopup.extraRows.add(new PopupRow(PopupKind.TOGGLE, "Яндекс музыка", ymProvider, null));
+        if (MusicSettings.instance() != null) MusicSettings.instance().setUiToggle(ymProvider);
     }
 
     @Override
@@ -383,7 +389,7 @@ public class Interface extends Module {
                 armourCorners, armourDurability);
         addSettings(totemBarBlur, totemBarSize, totemBarAlpha, totemBarShine, totemBarShineAlpha,
                 totemBarShineThickness, totemBarCorners);
-        addSettings(musBlur, musSize, musAlpha, musShine, musShineAlpha, musShineThickness, musCorners);
+        addSettings(musBlur, musSize, musAlpha, musShine, musShineAlpha, musShineThickness, musCorners, ymProvider);
         addSettings(thBlur, thSize, thAlpha, thShine, thShineAlpha, thShineThickness, thCorners,
                 thShowOnHover, thShowItems);
         addSettings(ntBlur, ntSize, ntAlpha, ntShine, ntShineAlpha, ntShineThickness, ntCorners,
@@ -1036,6 +1042,14 @@ public class Interface extends Module {
         }
 
         TrackState state = music.state();
+
+        // Зеркало выбора провайдера (меняется командой .music / тумблером в попупе)
+        MusicSettings mSettings = MusicSettings.instance();
+        if (mSettings != null && ymProvider.isState() != mSettings.isYandex()) {
+            ymProvider.setState(mSettings.isYandex());
+        }
+
+        boolean ym = music.isYandex();
         float size = musicPopup.size.get();
         float screenW = mc.getWindow().getScaledWidth();
         float screenH = mc.getWindow().getScaledHeight();
@@ -1058,12 +1072,12 @@ public class Interface extends Module {
         }
 
         beginScale(musicPopup, context);
-        renderMusicContent(context, state, ox, oy, size);
+        renderMusicContent(context, state, ox, oy, size, ym);
         endScale(musicPopup, context);
         runPopup(musicPopup, context);
     }
 
-    private void renderMusicContent(DrawContext context, TrackState state, float ox, float oy, float scale) {
+    private void renderMusicContent(DrawContext context, TrackState state, float ox, float oy, float scale, boolean ym) {
         float x = ox;
         float y = oy;
 
@@ -1080,21 +1094,35 @@ public class Interface extends Module {
         drawRound(iconX + 0.2f, iconY + 10.8f, 4.6f, 3.4f, 1.6f, iconColor); // note head 1
         drawRound(iconX + 5.8f, iconY + 9.4f, 4.6f, 3.4f, 1.6f, iconColor);  // note head 2
 
+        // Ширина под текст: у Spotify справа кнопка, у ЯМ — мини-тег «ЯМ»
+        float textMaxW;
+        if (ym) {
+            textMaxW = (MUSIC_W - MUSIC_PAD - MUSIC_TEXT_X - 4f) - (width("ЯМ", 5f) + 5f);
+        } else {
+            textMaxW = MUSIC_TEXT_MAX_W;
+        }
+
         // Название (бегущая строка, если не помещается)
         String title = (state.title != null && !state.title.isEmpty()) ? state.title : state.artist;
-        drawMarqueeText(title, x + MUSIC_TEXT_X, y + 4.5f, MUSIC_TEXT_MAX_W,
+        drawMarqueeText(title, x + MUSIC_TEXT_X, y + 4.5f, textMaxW,
                 HudColors.rgba(246, 249, 255, 238), 7.5f, ox, oy, scale);
+
+        if (ym) {
+            String tag = "ЯМ";
+            float tw = width(tag, 5f);
+            drawText(tag, x + MUSIC_W - MUSIC_PAD - tw, y + 5.5f, HudColors.rgba(150, 190, 235, 190), 5f);
+        }
 
         // Исполнитель
         if (state.artist != null && !state.artist.isEmpty() && !state.artist.equals(state.title)) {
-            drawMarqueeText(state.artist, x + MUSIC_TEXT_X, y + 15f, MUSIC_TEXT_MAX_W,
+            drawMarqueeText(state.artist, x + MUSIC_TEXT_X, y + 15f, textMaxW,
                     HudColors.rgba(170, 182, 200, 190), 6.5f, ox, oy, scale);
         }
 
         // Прогресс
         float barX = x + MUSIC_TEXT_X;
         float barY = y + 31f;
-        float barW = MUSIC_TEXT_MAX_W;
+        float barW = textMaxW;
         float barH = 3.5f;
         musicBarRelX = MUSIC_TEXT_X;
         musicBarRelY = 31f;
@@ -1122,24 +1150,26 @@ public class Interface extends Module {
                 : fmtTime(state.positionMs) + " / " + fmtTime(state.durationMs);
         drawText(timeText, x + MUSIC_TEXT_X, y + 37.5f, HudColors.rgba(152, 164, 182, 185), 5.5f);
 
-        // Кнопка play/pause
-        float btnX = x + MUSIC_W - MUSIC_PAD - MUSIC_BTN;
-        float btnY = y + (MUSIC_H - MUSIC_BTN) / 2f;
-        musicBtnRelX = MUSIC_W - MUSIC_PAD - MUSIC_BTN;
-        musicBtnRelY = (MUSIC_H - MUSIC_BTN) / 2f;
-        drawRound(btnX, btnY, MUSIC_BTN, MUSIC_BTN, 4f, HudColors.rgba(255, 255, 255, 34));
+        // Кнопка play/pause (только Spotify; у ЯМ управление в приложении)
+        if (!ym) {
+            float btnX = x + MUSIC_W - MUSIC_PAD - MUSIC_BTN;
+            float btnY = y + (MUSIC_H - MUSIC_BTN) / 2f;
+            musicBtnRelX = MUSIC_W - MUSIC_PAD - MUSIC_BTN;
+            musicBtnRelY = (MUSIC_H - MUSIC_BTN) / 2f;
+            drawRound(btnX, btnY, MUSIC_BTN, MUSIC_BTN, 4f, HudColors.rgba(255, 255, 255, 34));
 
-        int symColor = HudColors.rgba(245, 248, 255, 240);
-        if (state.paused) {
-            drawPlayTriangle(btnX + MUSIC_BTN / 2f + 0.6f, btnY + MUSIC_BTN / 2f, 8f, symColor);
-        } else {
-            float bw = 2f;
-            float bh = 7f;
-            float gap = 2.4f;
-            float by = btnY + (MUSIC_BTN - bh) / 2f;
-            float bx = btnX + (MUSIC_BTN - bw * 2f - gap) / 2f;
-            drawRound(bx, by, bw, bh, 0.9f, symColor);
-            drawRound(bx + bw + gap, by, bw, bh, 0.9f, symColor);
+            int symColor = HudColors.rgba(245, 248, 255, 240);
+            if (state.paused) {
+                drawPlayTriangle(btnX + MUSIC_BTN / 2f + 0.6f, btnY + MUSIC_BTN / 2f, 8f, symColor);
+            } else {
+                float bw = 2f;
+                float bh = 7f;
+                float gap = 2.4f;
+                float by = btnY + (MUSIC_BTN - bh) / 2f;
+                float bx = btnX + (MUSIC_BTN - bw * 2f - gap) / 2f;
+                drawRound(bx, by, bw, bh, 0.9f, symColor);
+                drawRound(bx + bw + gap, by, bw, bh, 0.9f, symColor);
+            }
         }
 
         musicVisible = true;
@@ -1221,6 +1251,8 @@ public class Interface extends Module {
 
         MusicManager music = MusicManager.instance;
         if (music == null || !music.isMusicActive()) return false;
+        // У Яндекс Музыки управление (пауза/seek) не поддерживается
+        if (!music.supportsControl()) return false;
         TrackState state = music.state();
 
         float size = Math.max(0.01f, musicPopup.size.get());

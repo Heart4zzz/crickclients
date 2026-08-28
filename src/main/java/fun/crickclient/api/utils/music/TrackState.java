@@ -3,6 +3,7 @@ package fun.crickclient.api.utils.music;
 /** Снимок состояния воспроизведения (заполняется MusicManager). */
 public class TrackState {
     public String provider = "";
+    public String trackId = "";
     public String title = "";
     public String artist = "";
     public String album = "";
@@ -13,6 +14,7 @@ public class TrackState {
 
     public void clear() {
         provider = "";
+        trackId = "";
         title = "";
         artist = "";
         album = "";

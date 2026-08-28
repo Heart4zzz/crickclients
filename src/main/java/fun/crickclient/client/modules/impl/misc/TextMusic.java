@@ -24,9 +24,11 @@ import fun.crickclient.api.utils.render.fonts.msdf.Fonts;
 import fun.crickclient.client.modules.Module;
 import fun.crickclient.client.modules.settings.implement.FloatSetting;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Песня «в мире»: текущая строка текста появляется в случайной точке перед игроком,
@@ -60,6 +62,11 @@ public class TextMusic extends Module {
     private int lineIndex = -1;
     private LineState current;
     private LineState previous;
+
+    // Тексты из API (Яндекс Музыка): приходят асинхронно в фоновом потоке
+    private volatile List<LrcLoader.LyricLine> pendingLyrics;
+    private volatile boolean lyricsFailed;
+    private final AtomicReference<String> lyricsRequest = new AtomicReference<>();
 
     /** Позиция воспроизведения, сглаженная по кадрам (мс). */
     private double displayPosMs = -1;
@@ -125,12 +132,31 @@ public class TextMusic extends Module {
         }
 
         TrackState st = music.state();
-        String key = (st.artist + "||" + st.title).toLowerCase(Locale.ROOT);
+        String key = music.isYandex()
+                ? "ym|" + st.trackId
+                : "sp|" + (st.artist + "||" + st.title).toLowerCase(Locale.ROOT);
         if (!key.equals(lastTrackKey)) {
             lastTrackKey = key;
+            pendingLyrics = null;
+            lyricsFailed = false;
             loadTrack(st);
             hasDisplayPos = false;
             return;
+        }
+
+        // Пришли тексты из API — переключаемся с заголовка на реальные строки
+        if (music.isYandex()) {
+            if (pendingLyrics != null) {
+                List<LrcLoader.LyricLine> got = pendingLyrics;
+                pendingLyrics = null;
+                previous = current;
+                if (previous != null) previous.switchedAtMs = System.currentTimeMillis();
+                lines = normalizeLyrics(got, st.durationMs);
+                lineIndex = -1;
+                pickLineForPosition(st.positionMs);
+            } else if (lines == null && !lyricsFailed && !st.trackId.isEmpty()) {
+                requestYmLyrics(st.trackId);
+            }
         }
 
         long pos = st.positionMs;
@@ -152,24 +178,74 @@ public class TextMusic extends Module {
     }
 
     private void loadTrack(TrackState st) {
+        if (MusicManager.instance != null && MusicManager.instance.isYandex()) {
+            // Пока тексты грузятся из API — караоке по названию
+            lines = null;
+            buildTitleFallback(st);
+            if (!st.trackId.isEmpty() && current != null) {
+                requestYmLyrics(st.trackId);
+            } else {
+                lyricsFailed = true;
+            }
+            return;
+        }
+
         lines = LrcLoader.load(st.artist, st.title);
         lineIndex = -1;
 
         if (lines == null || lines.isEmpty()) {
             // Fallback: караоке по названию на всю длину трека
-            String text = (st.title != null && !st.title.isEmpty()) ? st.title : st.artist;
-            if (text == null || text.isEmpty()) {
-                current = null;
-                previous = null;
-                return;
-            }
-            lines = null;
-            current = buildLine(text, 0L, Math.max(1000L, st.durationMs));
-            previous = null;
+            buildTitleFallback(st);
             return;
         }
 
         pickLineForPosition(st.positionMs);
+    }
+
+    private void buildTitleFallback(TrackState st) {
+        String text = (st.title != null && !st.title.isEmpty()) ? st.title : st.artist;
+        if (text == null || text.isEmpty()) {
+            current = null;
+            previous = null;
+            return;
+        }
+        current = buildLine(text, 0L, Math.max(1000L, st.durationMs));
+        previous = null;
+    }
+
+    /** Запрос текстов из API Яндекса; результат появится в pendingLyrics. */
+    private void requestYmLyrics(String trackId) {
+        MusicManager music = MusicManager.instance;
+        if (music == null || trackId == null || trackId.isEmpty()) return;
+        lyricsRequest.set(trackId);
+        music.loadLyricsAsync(trackId, l -> {
+            // Игнорируем результат, если трек уже сменился
+            if (!trackId.equals(lyricsRequest.get())) return;
+            if (l != null && !l.isEmpty()) {
+                pendingLyrics = l;
+            } else {
+                lyricsFailed = true; // текстов у трека нет — остаёмся на заголовке
+            }
+        });
+    }
+
+    /**
+     * Тексты без таймкодов (plain) распределяем равномерно по длительности трека,
+     * синхронизированные оставляем как есть.
+     */
+    private static List<LrcLoader.LyricLine> normalizeLyrics(List<LrcLoader.LyricLine> got, long durationMs) {
+        if (got.get(0).startMs >= 0) return got;
+
+        long total = Math.max(1000L, durationMs);
+        long slot = Math.max(100L, total / got.size());
+        List<LrcLoader.LyricLine> out = new ArrayList<>();
+        for (int i = 0; i < got.size(); i++) {
+            LrcLoader.LyricLine src = got.get(i);
+            LrcLoader.LyricLine line = new LrcLoader.LyricLine(i * slot, src.text);
+            line.endMs = (i + 1 == got.size()) ? total : (i + 1) * slot;
+            out.add(line);
+        }
+        return out;
     }
 
     private boolean hasNextLine() {
