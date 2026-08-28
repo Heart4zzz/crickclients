@@ -122,7 +122,7 @@ public class AiCommand extends Command {
         storage.setRecording(false);
         storage.setUsingNeuro(true);
         storage.resetState();
-        aura.rotationType.set("AI");
+        aura.mode.set("ai");
 
         ChatUtils.sendMessage("§aAI-ротация запущена с профилем: §f" + name);
         ChatUtils.sendMessage("§7Настройки «Джиттер ИИ» и «Человеческие промахи» доступны в Aura.");
