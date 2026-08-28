@@ -1,0 +1,24 @@
+package rw.data;
+
+import KDFzREm.NNNxM;
+import java.lang.runtime.ObjectMethods;
+
+public record Rec0152() implements NNNxM {
+   private final int f1000;
+
+   public Rec0152(int var1) {
+      this.f1000 = var1;
+   }
+
+   public String m2000() {
+      return "[" + this.f1000 + "]";
+   }
+
+   public final boolean m4000(Object var1) {
+      return ObjectMethods.bootstrap<"equals",Rec0152,"index",Rec0152::f1000>(this, var1);
+   }
+
+   public int m6000() {
+      return this.f1000;
+   }
+}

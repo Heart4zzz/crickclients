@@ -1,0 +1,27 @@
+package rw.gui;
+
+import rw.GuiWidget;
+import rw.NursultanClient;
+import rw.api.AnnotationDefault;
+import rw.defs.Enum0055;
+
+@AnnotationDefault(
+   L = "Potions",
+   y = Enum0055.VISUAL,
+   N = Enum0070.INTERFACE
+)
+public class C0111 extends GuiWidget {
+   static {
+      ntfClinit();
+   }
+
+   public boolean m2000() {
+      NursultanClient.m42000().m64000();
+      return super.m12000();
+   }
+
+   public boolean m4000() {
+      NursultanClient.m42000().m64000();
+      return super.m14000();
+   }
+}

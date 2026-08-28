@@ -89,7 +89,7 @@ public class AutoSwap extends Module {
     private static final int WHEEL_COUNT = 8;
 
     public AutoSwap() {
-        super("AutoSwap", "Быстрая смена предметов в офф-хенде и на голове", ModuleCategory.COMBAT);
+        super("AutoSwap", "Быстрая смена предметов", ModuleCategory.COMBAT);
         addSettings(offhandSwapKey, headSwapKey, serverBypass, swapMode, firstItem, secondItem,
                 slot1, slot2, slot3, slot4, slot5, slot6, slot7, slot8);
     }

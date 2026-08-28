@@ -20,9 +20,9 @@ public class AirStuck extends Module {
 
     public static AirStuck INSTANCE = new AirStuck();
 
-    private final ModeSetting modeSetting = new ModeSetting("Mode", "Grim", "Grim", "FunTime");
+    private final ModeSetting modeSetting = new ModeSetting("Режим", "Grim", "Grim", "FunTime");
 
-    private final BooleanSetting fallCheck = new BooleanSetting("Fall Check", true);
+    private final BooleanSetting fallCheck = new BooleanSetting("Проверка на падение", true);
 
     private Vec3d savedVelocity = Vec3d.ZERO;
     private final Queue<Packet<?>> packets = new ConcurrentLinkedQueue<>();
