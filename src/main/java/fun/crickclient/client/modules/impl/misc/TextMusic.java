@@ -209,7 +209,9 @@ public class TextMusic extends Module {
             previous = null;
             return;
         }
-        current = buildLine(text, 0L, Math.max(1000L, st.durationMs));
+        long dur = st.durationMs > 0 ? st.durationMs : 300_000L; // если Spotify не вернул длительность — показываем 5 минут
+        // Для Spotify без LRC показываем весь трек одной строкой, а не 1 секунду
+        current = buildLine(text, 0L, Math.max(1000L, dur));
         previous = null;
     }
 

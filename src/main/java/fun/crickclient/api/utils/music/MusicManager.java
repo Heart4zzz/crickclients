@@ -66,16 +66,24 @@ public class MusicManager implements QClient {
 
         if (settings.isYandex()) {
             if (settings.yandexToken().isEmpty()) {
-                hasTrack = false;
-                long now = System.currentTimeMillis();
-                if (now - lastNoTokenWarn > 30_000L) {
-                    lastNoTokenWarn = now;
-                    mc.player.sendMessage(Text.literal("§cЯндекс Музыка: не задан токен — §f.music ym <токен>"), true);
+                // Токен не задан — пробуем Spotify как fallback, чтобы HUD не пропадал
+                yandex.stop();
+                hasTrack = spotify.tryPoll(state);
+                if (!hasTrack) {
+                    long now = System.currentTimeMillis();
+                    if (now - lastNoTokenWarn > 30_000L) {
+                        lastNoTokenWarn = now;
+                        mc.player.sendMessage(Text.literal("§cЯндекс Музыка: не задан токен — §f.music ym <токен>"), true);
+                    }
                 }
                 return;
             }
             yandex.ensureStarted();
             hasTrack = yandex.tryPoll(state);
+            if (!hasTrack) {
+                // Если YM не играет — показываем Spotify, чтобы HUD не исчезал
+                hasTrack = spotify.tryPoll(state);
+            }
         } else {
             yandex.stop();
             hasTrack = spotify.tryPoll(state);
@@ -83,7 +91,10 @@ public class MusicManager implements QClient {
     }
 
     public boolean isMusicActive() {
-        return hasTrack && state.title != null && !state.title.isEmpty();
+        if (!hasTrack) return false;
+        boolean hasTitle = state.title != null && !state.title.isEmpty();
+        boolean hasArtist = state.artist != null && !state.artist.isEmpty();
+        return hasTitle || hasArtist;
     }
 
     public TrackState state() {
