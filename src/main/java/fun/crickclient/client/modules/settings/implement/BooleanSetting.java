@@ -21,6 +21,15 @@ public class BooleanSetting extends Setting {
         return new BooleanSetting(name, state);
     }
 
+    /** Явные геттер/сеттер: не зависят от генерации Lombok. */
+    public boolean isState() {
+        return state;
+    }
+
+    public void setState(boolean state) {
+        this.state = state;
+    }
+
     public void toggle() {
         this.state = !this.state;
     }

@@ -469,7 +469,7 @@ public class TextMusic extends Module {
                 float from = line.wordCenters[activeIdx];
                 float to = line.wordCenters[Math.min(activeIdx + 1, line.words.length - 1)];
                 // Дуга прыжка между словами
-                float hop = (float) Math.sin(t01 * Math.PI) * (4.5f + 1.5f * Math.sin(time * 2f));
+                float hop = (float) (Math.sin(t01 * Math.PI) * (4.5f + 1.5f * Math.sin(time * 2f)));
                 targetX = from + (to - from) * t01;
                 targetY = textTop - 3.5f - hop;
             }

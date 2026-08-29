@@ -24,6 +24,11 @@ public class MusicSettings {
 
     public static MusicSettings instance;
 
+    /** Доступ к синглтону (создаётся в CrickClient при старте). */
+    public static MusicSettings instance() {
+        return instance;
+    }
+
     public static final String PROVIDER_SPOTIFY = "spotify";
     public static final String PROVIDER_YANDEX = "yandex";
 
@@ -75,8 +80,8 @@ public class MusicSettings {
     private void load() {
         if (!file.exists() || !file.isFile()) return;
         try {
-            String json = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
-            JsonObject json = JsonParser.parseString(json).getAsJsonObject();
+            String raw = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+            JsonObject json = JsonParser.parseString(raw).getAsJsonObject();
             if (json.has("provider")) {
                 String p = json.get("provider").getAsString();
                 if (PROVIDER_YANDEX.equals(p) || PROVIDER_SPOTIFY.equals(p)) provider = p;
