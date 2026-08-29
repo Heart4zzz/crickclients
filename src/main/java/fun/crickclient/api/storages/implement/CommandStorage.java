@@ -40,8 +40,7 @@ public class CommandStorage {
                 new VClipCommand(),
                 new DataCommand(),
                 new TPCommand(),
-                new AiCommand(),
-                new MusicCommand()
+                new AiCommand()
         );
     }
 
