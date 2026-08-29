@@ -97,7 +97,6 @@ public interface ModuleRewords {
     TpBack tpBack = TpBack.INSTANCE;
     TpsSync tpsSync = TpsSync.INSTANCE;
     TpLoot tpLoot = TpLoot.INSTANCE;
-    TextMusic textMusic = TextMusic.INSTANCE;
     ViewModel viewModel = ViewModel.INSTANCE;
     WorldTweaks worldTweaks = WorldTweaks.INSTANCE;
     XCarry xCarry = XCarry.INSTANCE;
