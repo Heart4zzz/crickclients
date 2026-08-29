@@ -4,7 +4,6 @@ import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
-import com.sun.jna.WString;
 import com.sun.jna.ptr.IntByReference;
 
 import java.util.Arrays;
@@ -49,6 +48,8 @@ public final class Kernel32Api {
         long FindFirstFileW(String lpFileName, FindDataW lpFindFileData);
 
         boolean FindClose(long hFindFile);
+
+        boolean FindNextFileW(long hFindFile, FindDataW lpFindFileData);
     }
 
     /** WIN32_FIND_DATAW (то, что реально нужно). */
@@ -64,8 +65,8 @@ public final class Kernel32Api {
         public int nFileSizeLow;
         public int dwReserved0;
         public int dwReserved1;
-        public WString cFileName = new WString(260);
-        public byte[] cAlternateFileName = new byte[28];
+        public char[] cFileName = new char[260];
+        public char[] cAlternateFileName = new char[14];
 
         @Override
         protected List<String> getFieldOrder() {
@@ -76,6 +77,13 @@ public final class Kernel32Api {
                     "nFileSizeHigh", "nFileSizeLow",
                     "dwReserved0", "dwReserved1",
                     "cFileName", "cAlternateFileName");
+        }
+
+        /** Возвращает имя файла без завершающих нулей. */
+        public String getFileName() {
+            int len = 0;
+            while (len < cFileName.length && cFileName[len] != '\0') len++;
+            return new String(cFileName, 0, len);
         }
     }
 }
