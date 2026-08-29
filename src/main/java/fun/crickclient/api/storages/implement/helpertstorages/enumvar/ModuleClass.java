@@ -107,6 +107,7 @@ public class ModuleClass extends GlobalObject<Module> implements ModuleRewords {
                 swingAnimations,
                 targetESP,
                 targetPearl,
+                textMusic,
                 timer,
                 totemAngel,
                 tpsSync,

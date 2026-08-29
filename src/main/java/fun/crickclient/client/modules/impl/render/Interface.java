@@ -32,6 +32,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.world.GameMode;
+import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import fun.crickclient.CrickClient;
 import fun.crickclient.api.events.EventLink;
@@ -46,6 +47,9 @@ import fun.crickclient.api.utils.color.HudColors;
 import fun.crickclient.api.utils.draggable.Draggable;
 import fun.crickclient.api.utils.input.KeyBoardUtils;
 import fun.crickclient.api.utils.math.HoveringUtils;
+import fun.crickclient.api.utils.music.MusicManager;
+import fun.crickclient.api.utils.music.MusicSettings;
+import fun.crickclient.api.utils.music.TrackState;
 import fun.crickclient.api.utils.notification.NotificationManager;
 import fun.crickclient.api.utils.player.Counter;
 import fun.crickclient.api.utils.render.RenderUtils;
@@ -55,6 +59,7 @@ import fun.crickclient.api.utils.render.fonts.msdf.Fonts;
 import fun.crickclient.api.utils.render.hud.HudShine;
 import fun.crickclient.api.utils.render.hud.TimerTextAnimator;
 import fun.crickclient.api.utils.replace.ReplaceUtils;
+import fun.crickclient.api.utils.scissor.ScissorUtils;
 import fun.crickclient.client.modules.Module;
 import fun.crickclient.client.modules.impl.combat.AntiBot;
 import fun.crickclient.client.modules.impl.combat.Aura;
@@ -127,6 +132,7 @@ public class Interface extends Module {
             new BooleanSetting("Кастомный хотбар", false),
             new BooleanSetting("Броня", false),
             new BooleanSetting("Полоса тотемов", false),
+            new BooleanSetting("Музыка", false),
             new BooleanSetting("Блюр фона", true)
     );
 
@@ -147,6 +153,7 @@ public class Interface extends Module {
     private final Draggable hotbarDrag = CrickClient.draggable(this, "CustomHotbar", 150, 220);
     private final Draggable armourDrag = CrickClient.draggable(this, "ArmourBar", 150, 245);
     private final Draggable totemBarDrag = CrickClient.draggable(this, "TotemBar", 150, 270);
+    private final Draggable musicDrag = CrickClient.draggable(this, "Music", 10, 64);
     private final Draggable notificationsDrag = CrickClient.draggable(this, "Notifications", 250, 250);
 
     public final NotificationsElement notifications = new NotificationsElement();
@@ -249,6 +256,17 @@ public class Interface extends Module {
     private final FloatSetting totemBarShineThickness = hidden(new FloatSetting("Толщина блика тотем-бар", 0.5f, 0.2f, 2.0f, 0.05f));
     private final BooleanSetting totemBarCorners = hidden(new BooleanSetting("Уголки полосы тотемов", true));
 
+    // Music
+    private final BooleanSetting musBlur = hidden(new BooleanSetting("Блюр музыки", true));
+    private final FloatSetting musSize = hidden(new FloatSetting("Размер музыки", 1.00f, 0.5f, 2.0f, 0.05f));
+    private final FloatSetting musAlpha = hidden(new FloatSetting("Прозрачность музыки", 180f, 0f, 255f, 1f));
+    private final BooleanSetting musShine = hidden(new BooleanSetting("Блик музыки", true));
+    private final FloatSetting musShineAlpha = hidden(new FloatSetting("Прозрачность блика музыки", 30f, 0f, 100f, 1f));
+    private final FloatSetting musShineThickness = hidden(new FloatSetting("Толщина блика музыки", 0.5f, 0.2f, 2.0f, 0.05f));
+    private final BooleanSetting musCorners = hidden(new BooleanSetting("Уголки музыки", false));
+    /** false = Spotify, true = Яндекс Музыка (зеркало MusicSettings). */
+    private final BooleanSetting ymProvider = hidden(new BooleanSetting("Яндекс музыка", false));
+
     // TargetHUD
     private final BooleanSetting thBlur = hidden(new BooleanSetting("Блюр тх", true));
     private final FloatSetting thSize = hidden(new FloatSetting("Размер тх", 1.00f, 0.5f, 2.0f, 0.05f));
@@ -304,6 +322,10 @@ public class Interface extends Module {
             totemBarBlur, totemBarSize, totemBarAlpha, null,
             totemBarShine, totemBarShineAlpha, totemBarShineThickness, totemBarCorners);
 
+    private final HudPopup musicPopup = new HudPopup("Music", musicDrag,
+            musBlur, musSize, musAlpha, null,
+            musShine, musShineAlpha, musShineThickness, musCorners);
+
     private final HudPopup targetHudPopup = new HudPopup("TargetHUD", targetHUDDrag,
             thBlur, thSize, thAlpha, null,
             thShine, thShineAlpha, thShineThickness, thCorners);
@@ -333,6 +355,9 @@ public class Interface extends Module {
 
         notificationsPopup.extraRows.add(new PopupRow(PopupKind.TOGGLE, "Состояния модулей", notifModuleStates, null));
         notificationsPopup.extraRows.add(new PopupRow(PopupKind.TOGGLE, "Снос тотема", notifTotem, null));
+
+        musicPopup.extraRows.add(new PopupRow(PopupKind.TOGGLE, "Яндекс музыка", ymProvider, null));
+        if (MusicSettings.instance() != null) MusicSettings.instance().setUiToggle(ymProvider);
     }
 
     @Override
@@ -364,6 +389,7 @@ public class Interface extends Module {
                 armourCorners, armourDurability);
         addSettings(totemBarBlur, totemBarSize, totemBarAlpha, totemBarShine, totemBarShineAlpha,
                 totemBarShineThickness, totemBarCorners);
+        addSettings(musBlur, musSize, musAlpha, musShine, musShineAlpha, musShineThickness, musCorners, ymProvider);
         addSettings(thBlur, thSize, thAlpha, thShine, thShineAlpha, thShineThickness, thCorners,
                 thShowOnHover, thShowItems);
         addSettings(ntBlur, ntSize, ntAlpha, ntShine, ntShineAlpha, ntShineThickness, ntCorners,
@@ -513,6 +539,7 @@ public class Interface extends Module {
         if (elements.is("Кастомный хотбар")) renderCustomHotbar(context);
         if (elements.is("Броня")) renderArmourBar(context);
         if (elements.is("Полоса тотемов")) renderTotemBar(context);
+        if (elements.is("Музыка")) renderMusic(context);
     }
 
     @EventLink
@@ -992,6 +1019,267 @@ public class Interface extends Module {
 
         totemBarDrag.setWidth(boxWidth);
         totemBarDrag.setHeight(boxHeight);
+    }
+
+    // ===================== Музыка =====================
+    private static final float MUSIC_W = 190f;
+    private static final float MUSIC_H = 50f;
+    private static final float MUSIC_PAD = 6f;
+    private static final float MUSIC_TEXT_X = 26f;
+    private static final float MUSIC_BTN = 16f;
+    private static final float MUSIC_TEXT_MAX_W = MUSIC_W - MUSIC_PAD - MUSIC_BTN - MUSIC_TEXT_X - 4f;
+
+    /** Прямоугольники в координатах элемента (без масштаба) — для кликов. */
+    private float musicBtnRelX, musicBtnRelY;
+    private float musicBarRelX, musicBarRelY, musicBarRelW, musicBarRelH;
+    private boolean musicVisible;
+
+    private void renderMusic(DrawContext context) {
+        MusicManager music = MusicManager.instance;
+        if (music == null || !music.isMusicActive()) {
+            musicVisible = false;
+            return;
+        }
+
+        TrackState state = music.state();
+
+        // Зеркало выбора провайдера (меняется командой .music / тумблером в попупе)
+        MusicSettings mSettings = MusicSettings.instance();
+        if (mSettings != null && ymProvider.isState() != mSettings.isYandex()) {
+            ymProvider.setState(mSettings.isYandex());
+        }
+
+        boolean ym = music.isYandex();
+        float size = musicPopup.size.get();
+        float screenW = mc.getWindow().getScaledWidth();
+        float screenH = mc.getWindow().getScaledHeight();
+
+        float ox = musicDrag.getX();
+        float oy = musicDrag.getY();
+        if (ox + MUSIC_W * size > screenW - 4f) ox = Math.max(2f, screenW - 4f - MUSIC_W * size);
+        if (oy + MUSIC_H * size > screenH - 4f) oy = Math.max(2f, screenH - 4f - MUSIC_H * size);
+        if (ox < 2f) ox = 2f;
+        if (oy < 2f) oy = 2f;
+
+        musicDrag.setX(ox);
+        musicDrag.setY(oy);
+        musicDrag.setWidth(MUSIC_W);
+        musicDrag.setHeight(MUSIC_H);
+
+        if (!(mc.currentScreen instanceof ChatScreen)) {
+            musicPopup.open = false;
+            musicPopup.draggingSlider = null;
+        }
+
+        beginScale(musicPopup, context);
+        renderMusicContent(context, state, ox, oy, size, ym);
+        endScale(musicPopup, context);
+        runPopup(musicPopup, context);
+    }
+
+    private void renderMusicContent(DrawContext context, TrackState state, float ox, float oy, float scale, boolean ym) {
+        float x = ox;
+        float y = oy;
+
+        drawElementBackground(musicPopup, x, y, MUSIC_W, MUSIC_H, 4f, 1f);
+        drawElementShine(musicPopup, context, x, y, MUSIC_W, MUSIC_H, 4f);
+
+        // Иконка — пара восьмых нот с соединительной перекладиной
+        float iconX = x + MUSIC_PAD;
+        float iconY = y + 7f;
+        int iconColor = HudColors.rgba(240, 245, 255, 235);
+        drawRound(iconX + 3.2f, iconY + 1.0f, 7.6f, 2.4f, 1.1f, iconColor);  // beam
+        drawRound(iconX + 3.6f, iconY + 2.6f, 1.2f, 9.6f, 0.6f, iconColor);  // stem 1
+        drawRound(iconX + 9.2f, iconY + 1.2f, 1.2f, 9.6f, 0.6f, iconColor);  // stem 2
+        drawRound(iconX + 0.2f, iconY + 10.8f, 4.6f, 3.4f, 1.6f, iconColor); // note head 1
+        drawRound(iconX + 5.8f, iconY + 9.4f, 4.6f, 3.4f, 1.6f, iconColor);  // note head 2
+
+        // Ширина под текст: у Spotify справа кнопка, у ЯМ — мини-тег «ЯМ»
+        float textMaxW;
+        if (ym) {
+            textMaxW = (MUSIC_W - MUSIC_PAD - MUSIC_TEXT_X - 4f) - (width("ЯМ", 5f) + 5f);
+        } else {
+            textMaxW = MUSIC_TEXT_MAX_W;
+        }
+
+        // Название (бегущая строка, если не помещается)
+        String title = (state.title != null && !state.title.isEmpty()) ? state.title : state.artist;
+        drawMarqueeText(title, x + MUSIC_TEXT_X, y + 4.5f, textMaxW,
+                HudColors.rgba(246, 249, 255, 238), 7.5f, ox, oy, scale);
+
+        if (ym) {
+            String tag = "ЯМ";
+            float tw = width(tag, 5f);
+            drawText(tag, x + MUSIC_W - MUSIC_PAD - tw, y + 5.5f, HudColors.rgba(150, 190, 235, 190), 5f);
+        }
+
+        // Исполнитель
+        if (state.artist != null && !state.artist.isEmpty() && !state.artist.equals(state.title)) {
+            drawMarqueeText(state.artist, x + MUSIC_TEXT_X, y + 15f, textMaxW,
+                    HudColors.rgba(170, 182, 200, 190), 6.5f, ox, oy, scale);
+        }
+
+        // Прогресс
+        float barX = x + MUSIC_TEXT_X;
+        float barY = y + 31f;
+        float barW = textMaxW;
+        float barH = 3.5f;
+        musicBarRelX = MUSIC_TEXT_X;
+        musicBarRelY = 31f;
+        musicBarRelW = barW;
+        musicBarRelH = barH;
+
+        drawRound(barX, barY, barW, barH, barH / 2f, HudColors.rgba(255, 255, 255, 30));
+
+        float ratio;
+        if (state.live) {
+            ratio = 1f;
+        } else if (state.durationMs > 0) {
+            ratio = (float) MathHelper.clamp((double) state.positionMs / (double) state.durationMs, 0.0, 1.0);
+        } else {
+            ratio = 0f;
+        }
+        if (ratio > 0.004f) {
+            int accent = HudColors.setAlpha(HudColors.getColorClient(), 225);
+            drawRound(barX, barY, barW * ratio, barH, barH / 2f, accent);
+        }
+
+        // Время
+        String timeText = state.live
+                ? "LIVE"
+                : fmtTime(state.positionMs) + " / " + fmtTime(state.durationMs);
+        drawText(timeText, x + MUSIC_TEXT_X, y + 37.5f, HudColors.rgba(152, 164, 182, 185), 5.5f);
+
+        // Кнопка play/pause (только Spotify; у ЯМ управление в приложении)
+        if (!ym) {
+            float btnX = x + MUSIC_W - MUSIC_PAD - MUSIC_BTN;
+            float btnY = y + (MUSIC_H - MUSIC_BTN) / 2f;
+            musicBtnRelX = MUSIC_W - MUSIC_PAD - MUSIC_BTN;
+            musicBtnRelY = (MUSIC_H - MUSIC_BTN) / 2f;
+            drawRound(btnX, btnY, MUSIC_BTN, MUSIC_BTN, 4f, HudColors.rgba(255, 255, 255, 34));
+
+            int symColor = HudColors.rgba(245, 248, 255, 240);
+            if (state.paused) {
+                drawPlayTriangle(btnX + MUSIC_BTN / 2f + 0.6f, btnY + MUSIC_BTN / 2f, 8f, symColor);
+            } else {
+                float bw = 2f;
+                float bh = 7f;
+                float gap = 2.4f;
+                float by = btnY + (MUSIC_BTN - bh) / 2f;
+                float bx = btnX + (MUSIC_BTN - bw * 2f - gap) / 2f;
+                drawRound(bx, by, bw, bh, 0.9f, symColor);
+                drawRound(bx + bw + gap, by, bw, bh, 0.9f, symColor);
+            }
+        }
+
+        musicVisible = true;
+    }
+
+    /**
+     * Текст в заданной ширине: если помещается — статично, иначе бесшовная бегущая
+     * строка (со скроллом влево и паузой после прохода).
+     */
+    private void drawMarqueeText(String text, float x, float y, float maxW, int color, float size,
+                                 float ox, float oy, float scale) {
+        if (text == null || text.isEmpty()) return;
+
+        float textW = width(text, size);
+        if (textW <= maxW) {
+            drawText(text, x, y, color, size);
+            return;
+        }
+
+        float speed = 16f;          // px/с (в координатах элемента)
+        float pauseTravel = 80f;    // «тишина» после полного прохода
+        float cycle = maxW + textW + pauseTravel;
+        float s = (System.currentTimeMillis() / 1000f * speed) % cycle;
+        if (s > maxW + textW) return; // пауза — ничего не рисуем
+
+        float drawX = x + maxW - s;
+
+        // Scissor — в экранных координатах (матрица масштаба на него не влияет)
+        float sx = ox + (x - ox) * scale;
+        float sy = oy + (y - 2f) * scale;
+        float sw = maxW * scale;
+        float sh = (size + 7f) * scale;
+
+        ScissorUtils.push();
+        ScissorUtils.setFromComponentCoordinates(sx, sy, sw, sh);
+        try {
+            drawText(text, drawX, y, color, size);
+        } finally {
+            ScissorUtils.pop();
+        }
+    }
+
+    /** Треугольник «play» (для кнопки, когда трек на паузе). */
+    private void drawPlayTriangle(float cx, float cy, float s, int color) {
+        int r = (color >> 16) & 0xFF;
+        int g = (color >> 8) & 0xFF;
+        int b = color & 0xFF;
+        int a = (color >> 24) & 0xFF;
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableCull();
+        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
+
+        Matrix4f matrix = ms.peek().getPositionMatrix();
+        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION_COLOR);
+
+        float leftX = cx - s * 0.30f;
+        float topY = cy - s * 0.5f;
+        float bottomY = cy + s * 0.5f;
+        float rightX = cx + s * 0.55f;
+
+        buffer.vertex(matrix, leftX, topY, 0f).color(r, g, b, a);
+        buffer.vertex(matrix, leftX, bottomY, 0f).color(r, g, b, a);
+        buffer.vertex(matrix, rightX, cy, 0f).color(r, g, b, a);
+
+        BufferRenderer.drawWithGlobalProgram(buffer.end());
+    }
+
+    private static String fmtTime(long ms) {
+        if (ms < 0) ms = 0;
+        long totalSec = ms / 1000L;
+        return (totalSec / 60L) + ":" + String.format(java.util.Locale.US, "%02d", totalSec % 60L);
+    }
+
+    /** Клики по виджету музыки: play/pause и перемотка по прогресс-бару. */
+    private boolean handleMusicClick(double mouseX, double mouseY, int button) {
+        if (button != 0 || !musicVisible) return false;
+
+        MusicManager music = MusicManager.instance;
+        if (music == null || !music.isMusicActive()) return false;
+        // У Яндекс Музыки управление (пауза/seek) не поддерживается
+        if (!music.supportsControl()) return false;
+        TrackState state = music.state();
+
+        float size = Math.max(0.01f, musicPopup.size.get());
+        float ox = musicDrag.getX();
+        float oy = musicDrag.getY();
+
+        // Координаты мыши -> координаты элемента (без масштаба)
+        float relX = ((float) mouseX - ox) / size;
+        float relY = ((float) mouseY - oy) / size;
+
+        // Кнопка play/pause
+        if (HoveringUtils.isInRegion(mouseX, mouseY,
+                ox + musicBtnRelX * size, oy + musicBtnRelY * size, MUSIC_BTN * size, MUSIC_BTN * size)) {
+            music.togglePlayPause();
+            return true;
+        }
+
+        // Прогресс-бар (с запасом по вертикали для удобного клика)
+        if (relX >= musicBarRelX - 2f && relX <= musicBarRelX + musicBarRelW + 2f
+                && relY >= musicBarRelY - 3.5f && relY <= musicBarRelY + musicBarRelH + 3.5f
+                && !state.live && state.durationMs > 0) {
+            float frac = MathHelper.clamp((relX - musicBarRelX) / musicBarRelW, 0f, 1f);
+            music.seek((long) (frac * state.durationMs));
+            return true;
+        }
+
+        return false;
     }
 
     // ===================== Активные модераторы =====================
@@ -1576,6 +1864,12 @@ public class Interface extends Module {
         if (elements.is("Кастомный хотбар") && handleElementClick(hotbarPopup, mouseX, mouseY, button)) return true;
         if (elements.is("Броня") && handleElementClick(armourPopup, mouseX, mouseY, button)) return true;
         if (elements.is("Полоса тотемов") && handleElementClick(totemBarPopup, mouseX, mouseY, button)) return true;
+        if (elements.is("Музыка")) {
+            boolean wasOpen = musicPopup.open;
+            if (handleElementClick(musicPopup, mouseX, mouseY, button)) return true;
+            // Левый клик по виджету (кнопка/прогресс) работает, только когда окно настроек закрыто
+            if (!wasOpen && handleMusicClick(mouseX, mouseY, button)) return true;
+        }
         return false;
     }
 
@@ -1628,6 +1922,7 @@ public class Interface extends Module {
         hotbarPopup.draggingSlider = null;
         armourPopup.draggingSlider = null;
         totemBarPopup.draggingSlider = null;
+        musicPopup.draggingSlider = null;
     }
 
     // ===================== Бафы =====================

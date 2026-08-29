@@ -12,6 +12,8 @@ import fun.crickclient.api.storages.implement.*;
 import fun.crickclient.api.events.EventInvoker;
 import fun.crickclient.api.utils.client.UserInfo;
 import fun.crickclient.api.utils.draggable.Draggable;
+import fun.crickclient.api.utils.music.MusicManager;
+import fun.crickclient.api.utils.music.MusicSettings;
 import fun.crickclient.api.utils.rpc.DiscordManager;
 import fun.crickclient.api.utils.tps.TPSCalc;
 import fun.crickclient.client.modules.Module;
@@ -47,6 +49,8 @@ public enum CrickClient implements ModInitializer, QClient {
     public MacroStorage macroStorage;
     public StaffStorage staffStorage;
     public WaypointStorage waypointStorage;
+    public MusicSettings musicSettings;
+    public MusicManager musicManager;
     public DiscordManager discordManager;
     @Getter public UserInfo userInfo = UserInfo.empty();
 
@@ -74,6 +78,8 @@ public enum CrickClient implements ModInitializer, QClient {
 
         EventInvoker.register(this);
         createDirs(globalsDir, configsDir, abItemsDir);
+        this.musicSettings = new MusicSettings();
+        this.musicManager = new MusicManager();
         this.initializer = new InitializeStorage();
         this.initializer.onInitialize();
         this.discordManager = new DiscordManager().start();

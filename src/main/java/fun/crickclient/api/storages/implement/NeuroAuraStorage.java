@@ -1,11 +1,17 @@
 package fun.crickclient.api.storages.implement;
 
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.decoration.ArmorStandEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import fun.crickclient.api.QClient;
+import fun.crickclient.api.events.EventInvoker;
+import fun.crickclient.api.events.EventLink;
+import fun.crickclient.api.events.implement.EventAttackEntity;
+import fun.crickclient.api.events.implement.EventUpdate;
 import fun.crickclient.api.storages.implement.helpertstorages.NeuroPattern;
 import fun.crickclient.api.utils.rotate.Rotation;
 import fun.crickclient.client.modules.impl.combat.components.gcd.GCDUtil;
@@ -126,6 +132,52 @@ public class NeuroAuraStorage implements QClient {
 
     public NeuroAuraStorage() {
         createPatternsDirectory();
+        // Запись работает независимо от того, включён ли модуль Aura:
+        // тренировка идёт от ручных ударов игрока (криты по манекену/FakePlayer).
+        EventInvoker.register(this);
+    }
+
+    /**
+     * Записывает кадр тренировки каждый тик, пока идёт запись.
+     * Срабатывает и при выключенной килл ауре — бить нужно руками.
+     */
+    @EventLink
+    public void onTrainTick(EventUpdate event) {
+        if (!isRecording || mc.player == null || mc.world == null) return;
+        if (mc.player.isDead() || mc.player.isSpectator()) return;
+        recordTick(findTrainTarget(), mc.player.getYaw(), mc.player.getPitch(), false);
+    }
+
+    /**
+     * Ручной удар по цели во время тренировки — записывается как «hit»-кадр.
+     * Такие кадры получают приоритет при воспроизведении, чтобы аура била
+     * в те же моменты, что и игрок рукой (меньше миссов).
+     */
+    @EventLink
+    public void onTrainAttack(EventAttackEntity event) {
+        if (!isRecording || mc.player == null || mc.world == null) return;
+        if (event.getPlayer() != mc.player) return;
+        if (!(event.getTarget() instanceof LivingEntity living)) return;
+        if (living == mc.player || living instanceof ArmorStandEntity) return;
+        if (!living.isAlive() || living.getHealth() <= 0) return;
+        recordTick(living, mc.player.getYaw(), mc.player.getPitch(), true);
+    }
+
+    /** Ближайшая живая цель в радиусе записи (игроки, моба, FakePlayer). */
+    private LivingEntity findTrainTarget() {
+        LivingEntity best = null;
+        double bestDistSq = 8.0 * 8.0;
+        Vec3d eyePos = mc.player.getEyePos();
+        for (Entity entity : mc.world.getEntities()) {
+            if (!(entity instanceof LivingEntity living)) continue;
+            if (living == mc.player || !living.isAlive() || living.getHealth() <= 0) continue;
+            if (living instanceof ArmorStandEntity) continue;
+            double distSq = eyePos.squaredDistanceTo(living.getBoundingBox().getCenter());
+            if (distSq > bestDistSq) continue;
+            bestDistSq = distSq;
+            best = living;
+        }
+        return best;
     }
 
     private void createPatternsDirectory() {
@@ -140,12 +192,20 @@ public class NeuroAuraStorage implements QClient {
     }
 
     public void recordTick(LivingEntity target, float currentYaw, float currentPitch) {
+        recordTick(target, currentYaw, currentPitch, false);
+    }
+
+    /**
+     * @param attacked {@code true} для кадров, записанных в момент ручного удара
+     *                 (обходит троттлинг и помечается для приоритета при воспроизведении)
+     */
+    public void recordTick(LivingEntity target, float currentYaw, float currentPitch, boolean attacked) {
         if (!isRecording || mc.player == null) {
             return;
         }
 
         long now = System.currentTimeMillis();
-        if (now - lastRecordTime < MIN_RECORD_INTERVAL) {
+        if (!attacked && now - lastRecordTime < MIN_RECORD_INTERVAL) {
             return;
         }
 
@@ -176,6 +236,7 @@ public class NeuroAuraStorage implements QClient {
         frame.anglePitch = anglePitch;
         frame.distance = distance;
         frame.hasTarget = hasTarget;
+        frame.attacked = attacked;
         frame.smoothness = calculateSmoothness(deltaYaw, deltaPitch);
 
         frames.add(frame);
@@ -548,6 +609,12 @@ public class NeuroAuraStorage implements QClient {
             float distanceDiff = (float) Math.abs(frame.distance - distance);
             float score = yawDiff + pitchDiff + distanceDiff * 0.3f;
 
+            // Приоритет кадров, записанных в момент ручного удара — аура
+            // синхронизируется на позы «реальных» критов игрока.
+            if (frame.attacked) {
+                score *= 0.78f;
+            }
+
             if (score < bestScore) {
                 bestScore = score;
                 best = i;
@@ -813,6 +880,8 @@ public class NeuroAuraStorage implements QClient {
         double distance;
         boolean hasTarget;
         float smoothness;
+        /** Записан в момент ручного удара игрока (старые файлы читаются как false). */
+        boolean attacked;
     }
 
     private static class SaveData implements Serializable {

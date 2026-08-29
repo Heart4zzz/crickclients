@@ -207,10 +207,8 @@ public class Aura extends Module {
         lastYaw++;
         updateTarget();
 
-        if (dataSystem.isRecording()) {
-            LivingEntity recordTarget = findTargetForRecording();
-            dataSystem.recordTick(recordTarget, mc.player.getYaw(), mc.player.getPitch());
-        }
+        // Запись тренировки живёт в NeuroAuraStorage (EventLink на EventUpdate):
+        // она работает и при выключенной ауре, когда игрок бьёт руками.
     }
 
     @EventLink
@@ -346,28 +344,6 @@ public class Aura extends Module {
             processAttack();
         }
     }
-
-    private LivingEntity findTargetForRecording() {
-        LivingEntity bestTarget = null;
-        double bestDistance = 100.0;
-        Vec3d eyePos = mc.player.getEyePos();
-
-        for (Entity entity : mc.world.getEntities()) {
-            if (!(entity instanceof LivingEntity living)) continue;
-            if (living == mc.player) continue;
-            if (!living.isAlive() || living.getHealth() <= 0) continue;
-            if (living instanceof ArmorStandEntity) continue;
-
-            double distance = eyePos.squaredDistanceTo(living.getBoundingBox().getCenter());
-            if (distance > bestDistance) continue;
-
-            bestDistance = distance;
-            bestTarget = living;
-        }
-
-        return bestTarget;
-    }
-
 
     private void processAttack() {
         updateTarget();
