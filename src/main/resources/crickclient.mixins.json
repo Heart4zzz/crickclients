@@ -53,7 +53,8 @@
     "HeadFeatureRendererMixin",
     "HeldItemFeatureRendererMixin",
     "IdentifierMixin",
-    "MainMixin"
+    "MainMixin",
+    "TitleScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
