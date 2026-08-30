@@ -32,5 +32,6 @@ public class InitializeStorage implements QClient {
         CrickClient.INSTANCE.waypointStorage = new WaypointStorage();
         CrickClient.INSTANCE.commandStorage = new CommandStorage();
         CrickClient.INSTANCE.configStorage = new ConfigStorage();
+        CrickClient.INSTANCE.accountStorage = new AccountStorage();
     }
 }

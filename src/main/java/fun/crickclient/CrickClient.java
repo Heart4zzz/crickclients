@@ -47,6 +47,7 @@ public enum CrickClient implements ModInitializer, QClient {
     public MacroStorage macroStorage;
     public StaffStorage staffStorage;
     public WaypointStorage waypointStorage;
+    public AccountStorage accountStorage;
     public DiscordManager discordManager;
     @Getter public UserInfo userInfo = UserInfo.empty();
 
